@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Drift</title>
+<style>
+  html,body{margin:0;height:100%;background:#e8e8e8;overflow:hidden;
+    font-family:-apple-system,system-ui,Helvetica,Arial,sans-serif;color:#111;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  #score{position:fixed;top:18px;left:0;right:0;text-align:center;font-size:28px;
+    font-weight:600;font-variant-numeric:tabular-nums;pointer-events:none}
+  #msg{position:fixed;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;
+    pointer-events:none;line-height:1.5}
+  #crash{top:56px !important}
+  #mode,#crash{position:fixed;top:16px;right:14px;z-index:2;font:500 13px -apple-system,system-ui,sans-serif;
+    color:#111;background:#fff;border:1px solid #ccc;border-radius:16px;padding:7px 12px;
+    touch-action:manipulation}
+  #msg b{display:block;font-size:22px;font-weight:600}
+  #msg span{font-size:14px;color:#666}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="score"></div>
+<div id="msg"></div>
+<button id="mode"></button>
+<button id="crash"></button>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const scoreEl = document.getElementById('score'), msgEl = document.getElementById('msg');
+let W, H, DPR;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+}
+addEventListener('resize', resize); resize();
+
+const SEG = 20, HALF = 62;
+let best = 0; try { best = +localStorage.getItem('drift-best') || 0; } catch(e){}
+
+let pts, ang, curv, targetCurv, segLeft, car, idx, skids, state = 'ready', score;
+
+function genPoint(){
+  if (--segLeft <= 0){ targetCurv = (Math.random()*2-1) * 0.13; segLeft = 8 + Math.random()*22|0; }
+  curv += (targetCurv - curv) * 0.15;
+  ang += curv;
+  const up = -Math.PI/2, lim = 1.25;
+  if (ang < up - lim){ ang = up - lim; targetCurv = Math.abs(targetCurv); }
+  if (ang > up + lim){ ang = up + lim; targetCurv = -Math.abs(targetCurv); }
+  const p = pts[pts.length-1];
+  pts.push({x: p.x + Math.cos(ang)*SEG, y: p.y + Math.sin(ang)*SEG});
+}
+
+function reset(){
+  pts = [{x:0, y:200}]; ang = -Math.PI/2; curv = 0; targetCurv = 0; segLeft = 15;
+  for (let i=0; i<14; i++) pts.push({x:0, y:200 - (i+1)*SEG});   // straight start
+  while (pts.length < 200) genPoint();
+  car = {x:0, y:120, h:-Math.PI/2, vx:0, vy:-200, s:220};
+  idx = 4; skids = []; score = 0;
+}
+reset();
+
+// ---- input ----
+// mode 'sides': hold left/right half.  mode 'drag': slide finger from where it went down.
+let mode = 'sides'; try { mode = localStorage.getItem('drift-mode') || 'sides'; } catch(e){}
+const modeBtn = document.getElementById('mode');
+const DRAG_PX_90 = 120;   // px of slide = 90° of heading change
+const HELP = {
+  sides: 'hold left or right side to steer',
+  drag: 'hold and slide left or right to aim the car'
+};
+function showStart(){
+  msgEl.innerHTML = `<b>Drift</b><span>${HELP[mode]} · stay on the road<br>tap to start</span>`;
+}
+function setMode(m){
+  mode = m; pointers.clear();
+  modeBtn.textContent = m === 'drag' ? 'Mode: Slide' : 'Mode: Sides';
+  try { localStorage.setItem('drift-mode', m); } catch(e){}
+  if (state === 'ready') showStart();
+}
+modeBtn.addEventListener('pointerdown', e => e.stopPropagation());
+modeBtn.addEventListener('click', e => { setMode(mode === 'drag' ? 'sides' : 'drag'); modeBtn.blur(); });
+
+// crash toggle: when off, leaving the road doesn't end the run
+let crashOn = true; try { crashOn = localStorage.getItem('drift-crash') !== 'off'; } catch(e){}
+const crashBtn = document.getElementById('crash');
+function setCrash(on){
+  crashOn = on;
+  crashBtn.textContent = on ? 'Crash: On' : 'Crash: Off';
+  try { localStorage.setItem('drift-crash', on ? 'on' : 'off'); } catch(e){}
+}
+crashBtn.addEventListener('pointerdown', e => e.stopPropagation());
+crashBtn.addEventListener('click', () => { setCrash(!crashOn); crashBtn.blur(); });
+setCrash(crashOn);
+
+const pointers = new Map(); let keyL = false, keyR = false;
+function steerInput(){
+  let s = 0, last = null;
+  for (const v of pointers.values()) last = v;   // most recent touch wins
+  if (last){
+    if (mode === 'drag'){
+      // finger offset sets the heading itself, relative to heading at touch
+      if (!keyL && !keyR) return {target: last.h0 + (last.x - last.sx) / DRAG_PX_90 * Math.PI/2};
+    } else s = last.x < W/2 ? -1 : 1;
+  }
+  if (keyL) s = -1; if (keyR) s = 1;
+  return {rate: s};
+}
+function startIfIdle(){
+  if (state !== 'run'){ reset(); state = 'run'; msgEl.innerHTML = ''; return true; }
+  return false;
+}
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (startIfIdle()) return;
+  pointers.set(e.pointerId, {sx: e.clientX, x: e.clientX, h0: car.h});
+});
+cv.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId);
+  if (p) p.x = e.clientX;
+});
+const up = e => pointers.delete(e.pointerId);
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('pointerleave', up);
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') keyL = true;
+  else if (e.key === 'ArrowRight') keyR = true;
+  else if (e.key === ' ' || e.key === 'Enter') startIfIdle();
+});
+addEventListener('keyup', e => { if (e.key === 'ArrowLeft') keyL = false; if (e.key === 'ArrowRight') keyR = false; });
+addEventListener('contextmenu', e => e.preventDefault());
+
+// ---- update ----
+function update(dt){
+  const steer = steerInput();
+  car.s = Math.min(460, car.s + 9*dt);
+  if (steer.target !== undefined){
+    // swing toward the aimed heading quickly, but capped so it still feels like a car
+    const diff = steer.target - car.h;
+    const step = diff * (1 - Math.exp(-14*dt));
+    const cap = 7 * dt;
+    car.h += Math.max(-cap, Math.min(cap, step));
+  } else car.h += steer.rate * 3.1 * dt;
+  const dx = Math.cos(car.h)*car.s, dy = Math.sin(car.h)*car.s;
+  const k = 1 - Math.exp(-2.4*dt);                 // grip: lower = more slide
+  car.vx += (dx - car.vx)*k; car.vy += (dy - car.vy)*k;
+  car.x += car.vx*dt; car.y += car.vy*dt;
+
+  // nearest track point
+  let bi = idx, bd = Infinity;
+  // search further ahead so cutting back onto the road later still counts
+  for (let i = Math.max(0, idx-6); i < pts.length; i++){
+    const d = (pts[i].x-car.x)**2 + (pts[i].y-car.y)**2;
+    if (d < bd){ bd = d; bi = i; }
+  }
+  idx = bi;
+  while (pts.length < idx + 150) genPoint();
+  score = Math.max(score, Math.floor((idx-4) * SEG / 50));
+
+  // skid marks when sliding
+  const v = Math.hypot(car.vx, car.vy) || 1;
+  const slip = Math.abs((car.vx*Math.sin(car.h) - car.vy*Math.cos(car.h)) / v);
+  if (slip > 0.22){
+    const c = Math.cos(car.h), s = Math.sin(car.h);
+    for (const side of [-1, 1]){
+      const wx = car.x - c*9 - s*side*7, wy = car.y - s*9 + c*side*7;
+      skids.push({x:wx, y:wy, side, a: Math.min(0.35, slip*0.5), t: performance.now()});
+    }
+    if (skids.length > 1600) skids.splice(0, 200);
+  }
+
+  if (crashOn && Math.sqrt(bd) > HALF){
+    state = 'over';
+    if (score > best){ best = score; try { localStorage.setItem('drift-best', best); } catch(e){} }
+    msgEl.innerHTML = `<b>${score}</b><span>best ${best} · tap to retry</span>`;
+  }
+}
+
+// ---- draw ----
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle = '#e8e8e8'; ctx.fillRect(0,0,W,H);
+  const ox = W/2 - car.x, oy = H*0.66 - car.y;
+  ctx.translate(ox, oy);
+
+  // road
+  ctx.beginPath();
+  const a = Math.max(0, idx-40), b = Math.min(pts.length, idx+140);
+  ctx.moveTo(pts[a].x, pts[a].y);
+  for (let i=a+1; i<b; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = HALF*2; ctx.stroke();
+
+  // skids (as short dots joined per wheel)
+  for (const sk of skids){
+    ctx.fillStyle = `rgba(0,0,0,${sk.a})`;
+    ctx.fillRect(sk.x-1.5, sk.y-1.5, 3, 3);
+  }
+
+  // car
+  ctx.save();
+  ctx.translate(car.x, car.y); ctx.rotate(car.h);
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-13,-7,26,14,3) : ctx.rect(-13,-7,26,14); ctx.fill();
+  ctx.fillStyle = '#e8e8e8'; ctx.fillRect(4,-5,4,10);   // windshield
+  ctx.restore();
+
+  scoreEl.textContent = state === 'ready' ? '' : score;
+}
+
+let last = performance.now();
+function loop(t){
+  const dt = Math.min(0.033, (t-last)/1000); last = t;
+  if (state === 'run') update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+setMode(mode === 'drag' ? 'drag' : 'sides'); showStart();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
