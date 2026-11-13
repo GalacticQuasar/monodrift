@@ -5,8 +5,8 @@ import { COLORS, SCENERY } from '../config';
 import { createRng, type Rng } from '../sim/rng';
 
 export interface Sprite {
-  canopy: HTMLCanvasElement;
-  shadow: HTMLCanvasElement;
+  /** Tree with its ground shadow, at art resolution. */
+  image: HTMLCanvasElement;
   /** Art pixels from the sprite's top-left corner to the canopy centre. */
   cx: number;
   cy: number;
@@ -23,6 +23,51 @@ export function buildTreeSprites(): Sprite[] {
     for (let v = 0; v < SCENERY.variantsPerSize; v++) sprites.push(makeTree(R, rng));
   }
   return sprites;
+}
+
+export interface AtlasRect {
+  /** Source rectangle in the atlas, in device pixels. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * All sprites packed into one image, pre-scaled to device pixels. Drawing from it
+ * is a plain 1:1 copy from a single texture: no per-draw scaling, no texture switching.
+ */
+export interface Atlas {
+  image: CanvasImageSource;
+  /** Device pixels per art pixel. */
+  scale: number;
+  /** Per sprite index. */
+  rects: AtlasRect[];
+}
+
+export function buildAtlas(sprites: Sprite[], scale: number): Atlas {
+  const gap = 2;
+  const cellW = Math.max(...sprites.map(s => s.w)) * scale + gap;
+  const cellH = Math.max(...sprites.map(s => s.h)) * scale + gap;
+  const cols = Math.max(1, Math.floor(2048 / cellW));
+
+  const el = document.createElement('canvas');
+  el.width = cols * cellW;
+  el.height = Math.ceil(sprites.length / cols) * cellH;
+  const ctx = el.getContext('2d')!;
+  ctx.imageSmoothingEnabled = false;
+
+  const rects = sprites.map((s, i) => {
+    const x = (i % cols) * cellW, y = Math.floor(i / cols) * cellH;
+    const w = s.w * scale, h = s.h * scale;
+    ctx.drawImage(s.image, x, y, w, h);
+    return { x, y, w, h };
+  });
+
+  const atlas: Atlas = { image: el, scale, rects };
+  // an ImageBitmap can live on the GPU; swap it in when ready (the canvas works meanwhile)
+  createImageBitmap(el).then(bmp => (atlas.image = bmp), () => {});
+  return atlas;
 }
 
 interface Lobe {
@@ -79,24 +124,25 @@ function makeTree(R: number, rng: Rng): Sprite {
   });
   const ownerAt = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? -1 : owner[y * w + x]);
 
-  const canopy = canvas(w, h), shadow = canvas(w, h);
-  const cc = canopy.getContext('2d')!, sc = shadow.getContext('2d')!;
-  const px = (ctx: CanvasRenderingContext2D, color: string, x: number, y: number) => {
+  const image = canvas(w, h);
+  const ctx = image.getContext('2d')!;
+  const px = (color: string, x: number, y: number) => {
     ctx.fillStyle = color;
     ctx.fillRect(x, y, 1, 1);
   };
 
-  // ground shadow: a flat ellipse at the foot of the trunk
+  // ground shadow baked in under the tree: a flat ellipse at the foot of the trunk.
+  // (Trees are kept clear of the road including this shadow, so it never needs its own layer.)
   const rx = R * 0.9, ry = Math.max(1.2, R * 0.35);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (((x - cx - 0.5) / rx) ** 2 + ((y - baseY + 0.5) / ry) ** 2 <= 1) px(sc, COLORS.treeShadow, x, y);
+      if (((x - cx - 0.5) / rx) ** 2 + ((y - baseY + 0.5) / ry) ** 2 <= 1) px(COLORS.treeShadow, x, y);
     }
   }
 
-  // trunk (drawn first; the canopy covers its top)
+  // trunk (the canopy covers its top)
   for (let y = cy + Math.round(R * 0.5); y < baseY; y++) {
-    for (let i = 0; i < trunkW; i++) px(cc, COLORS.treeTrunk, cx + i, y);
+    for (let i = 0; i < trunkW; i++) px(COLORS.treeTrunk, cx + i, y);
   }
 
   // paint: silhouette outline, else the pixel's tone
@@ -105,10 +151,10 @@ function makeTree(R: number, rng: Rng): Sprite {
     for (let x = 0; x < w; x++) {
       if (ownerAt(x, y) < 0) continue;
       const silhouette = ownerAt(x + 1, y) < 0 || ownerAt(x - 1, y) < 0 || ownerAt(x, y + 1) < 0 || ownerAt(x, y - 1) < 0;
-      px(cc, silhouette ? COLORS.treeOutline : tones[tone[y * w + x]], x, y);
+      px(silhouette ? COLORS.treeOutline : tones[tone[y * w + x]], x, y);
     }
   }
-  return { canopy, shadow, cx: cx + 0.5, cy: cy + 0.5, w, h };
+  return { image, cx: cx + 0.5, cy: cy + 0.5, w, h };
 }
 
 function canvas(w: number, h: number): HTMLCanvasElement {

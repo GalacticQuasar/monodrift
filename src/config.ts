@@ -112,7 +112,7 @@ export const COLORS = {
   road: '#fff',
   car: '#111',
   windshield: '#e8e8e8',
-  skid: '0,0,0',
+  skid: '#000',
   treeShadow: 'rgba(0,0,0,0.1)',
   /** Pixel-art tree tones: outline, trunk, then canopy shades dark → light. */
   treeOutline: '#4d4d4d',

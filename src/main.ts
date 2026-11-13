@@ -5,6 +5,7 @@ import { KEYS, storage } from './lib/storage';
 import { startLoop } from './loop';
 import { createRenderer } from './render/renderer';
 import { createGame, step } from './sim/game';
+import { createFpsMeter } from './ui/fps';
 import { createHud } from './ui/hud';
 import { createSettings } from './ui/settings';
 
@@ -15,6 +16,7 @@ const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 const canvas = $<HTMLCanvasElement>('#c');
 const renderer = createRenderer(canvas);
 const hud = createHud($('#score'), $('#msg'));
+const fps = createFpsMeter();
 
 let best = Number(storage.get(KEYS.best)) || 0;
 let game = createGame(randomSeed());
@@ -62,6 +64,7 @@ startLoop({
     hud.showGameOver(game.score, best, UI.retryDelayMs);
   },
   render(alpha) {
+    fps?.frame(performance.now());
     renderer.draw(game, alpha);
     hud.setScore(game.phase === 'ready' || settings.zen ? '' : String(game.score));
   },

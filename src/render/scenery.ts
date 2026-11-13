@@ -17,8 +17,17 @@ export interface Tree {
 
 const SIZES = SCENERY.treeSizes;
 
+interface Cell {
+  cx: number;
+  cy: number;
+  trees: Tree[];
+}
+
 export interface Scenery {
-  /** Trees overlapping the given world-space rectangle. */
+  /**
+   * Trees overlapping the given world-space rectangle, back to front.
+   * The returned array is reused: valid until the next call.
+   */
   visible(g: GameState, left: number, top: number, right: number, bottom: number): Tree[];
 }
 
@@ -80,7 +89,8 @@ function generateCell(g: GameState, cx: number, cy: number): Tree[] {
 
 export function createScenery(): Scenery {
   let owner: GameState | null = null;
-  const cells = new Map<string, Tree[]>();
+  const cells = new Map<number, Cell>();
+  const out: Tree[] = []; // reused every frame to avoid garbage
 
   return {
     visible(g, left, top, right, bottom) {
@@ -88,20 +98,27 @@ export function createScenery(): Scenery {
         owner = g; // new run: new forest
         cells.clear();
       }
-      // cheap reset; cells near the car regenerate the same trees
-      if (cells.size > SCENERY.maxCachedCells) cells.clear();
 
       // biggest tree plus its shadow can poke into view from a neighbouring cell
       const pad = (SIZES[SIZES.length - 1] * 2 + 4) * SCENERY.pixelScale;
       const x0 = Math.floor((left - pad) / CELL), x1 = Math.floor((right + pad) / CELL);
       const y0 = Math.floor((top - pad) / CELL), y1 = Math.floor((bottom + pad) / CELL);
-      const out: Tree[] = [];
+
+      // evict cells far from view (never the visible ones, so no regeneration hitch)
+      if (cells.size > SCENERY.maxCachedCells) {
+        const margin = 4;
+        for (const [key, c] of cells) {
+          if (c.cx < x0 - margin || c.cx > x1 + margin || c.cy < y0 - margin || c.cy > y1 + margin) cells.delete(key);
+        }
+      }
+
+      out.length = 0;
       for (let cy = y0; cy <= y1; cy++) {
         for (let cx = x0; cx <= x1; cx++) {
-          const key = `${cx},${cy}`;
-          let trees = cells.get(key);
-          if (!trees) cells.set(key, (trees = generateCell(g, cx, cy)));
-          for (const t of trees) out.push(t);
+          const key = cx * 1048576 + cy; // unique while |cy| < 2^19 cells (~84M px)
+          let cell = cells.get(key);
+          if (!cell) cells.set(key, (cell = { cx, cy, trees: generateCell(g, cx, cy) }));
+          for (const t of cell.trees) out.push(t);
         }
       }
       // 3/4-view sprites: draw back to front so lower trees overlap higher ones

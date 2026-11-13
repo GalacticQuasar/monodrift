@@ -4,7 +4,7 @@ import { CAR, COLORS, SCENERY, TRACK, VIEW } from '../config';
 import type { GameState } from '../sim/game';
 import { followCar } from './camera';
 import { createScenery, type Tree } from './scenery';
-import { buildTreeSprites } from './sprites';
+import { buildAtlas, buildTreeSprites, type Atlas } from './sprites';
 
 export interface Renderer {
   /** `alpha` (0..1) blends between the previous and current sim step. */
@@ -14,9 +14,11 @@ export interface Renderer {
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export function createRenderer(canvas: HTMLCanvasElement): Renderer {
-  const ctx = canvas.getContext('2d')!;
+  // opaque: we paint every pixel each frame, so the browser needn't blend with the page
+  const ctx = canvas.getContext('2d', { alpha: false })!;
   const scenery = createScenery();
   const sprites = buildTreeSprites();
+  let atlas: Atlas | null = null;
   let W = 0, H = 0, dpr = 1;
 
   function resize() {
@@ -25,6 +27,9 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
     H = innerHeight;
     canvas.width = W * dpr;
     canvas.height = H * dpr;
+    // trees are pre-scaled to whole device pixels; rebuild only if that changes
+    const scale = Math.max(1, Math.round(SCENERY.pixelScale * dpr));
+    if (atlas?.scale !== scale) atlas = buildAtlas(sprites, scale);
   }
   addEventListener('resize', resize);
   resize();
@@ -42,10 +47,6 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
       const cam = followCar(cx, cy, W, H);
       ctx.translate(cam.x, cam.y);
 
-      const trees = scenery.visible(g, -cam.x, -cam.y, W - cam.x, H - cam.y);
-      ctx.imageSmoothingEnabled = false; // crisp pixel art (resets on canvas resize)
-      // tree shadows sit on the ground, under everything else
-      drawTrees(trees, 'shadow', cam);
 
       // road
       const pts = track.pts;
@@ -61,10 +62,13 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
       ctx.stroke();
 
       // skids
+      // (globalAlpha rather than an rgba() string per mark: no per-frame string garbage)
+      ctx.fillStyle = COLORS.skid;
       for (const m of g.skids.marks) {
-        ctx.fillStyle = `rgba(${COLORS.skid},${m.alpha})`;
+        ctx.globalAlpha = m.alpha;
         ctx.fillRect(m.x - 1.5, m.y - 1.5, 3, 3);
       }
+      ctx.globalAlpha = 1;
 
       // car
       ctx.save();
@@ -80,20 +84,24 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
       ctx.fillRect(4, -5, 4, 10);
       ctx.restore();
 
-      // canopies on top, so an off-road car (zen) drives under them
-      drawTrees(trees, 'canopy', cam);
+      // trees last, so an off-road car (zen) drives under them
+      drawTrees(scenery.visible(g, -cam.x, -cam.y, W - cam.x, H - cam.y), cam);
     },
   };
 
-  /** Draw tree sprites, snapped to whole device pixels so art pixels stay crisp. */
-  function drawTrees(trees: Tree[], layer: 'canopy' | 'shadow', cam: { x: number; y: number }) {
-    const S = SCENERY.pixelScale;
-    const snap = (v: number) => Math.round(v * dpr) / dpr;
+  /**
+   * Draw tree sprites from the atlas as 1:1 device-pixel copies: positions snap to
+   * whole device pixels and the atlas is already at device scale.
+   */
+  function drawTrees(trees: Tree[], cam: { x: number; y: number }) {
+    const { image, rects, scale } = atlas!;
+    const k = scale / dpr; // CSS px per art pixel
+    ctx.imageSmoothingEnabled = false; // resets whenever the canvas is resized
     for (const t of trees) {
-      const s = sprites[t.sprite];
-      const x = snap(t.x - s.cx * S + cam.x) - cam.x;
-      const y = snap(t.y - s.cy * S + cam.y) - cam.y;
-      ctx.drawImage(s[layer], x, y, s.w * S, s.h * S);
+      const s = sprites[t.sprite], r = rects[t.sprite];
+      const x = Math.round((t.x - s.cx * k + cam.x) * dpr) / dpr - cam.x;
+      const y = Math.round((t.y - s.cy * k + cam.y) * dpr) / dpr - cam.y;
+      ctx.drawImage(image, r.x, r.y, r.w, r.h, x, y, r.w / dpr, r.h / dpr);
     }
   }
 }
