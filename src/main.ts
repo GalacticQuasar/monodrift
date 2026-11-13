@@ -1,5 +1,5 @@
 import './style.css';
-import { MAX_FRAME_TIME, SIM_HZ } from './config';
+import { MAX_FRAME_TIME, SIM_HZ, UI } from './config';
 import { createInput } from './input/input';
 import { KEYS, storage } from './lib/storage';
 import { startLoop } from './loop';
@@ -18,17 +18,31 @@ const hud = createHud($('#score'), $('#msg'));
 
 let best = Number(storage.get(KEYS.best)) || 0;
 let game = createGame(randomSeed());
+/** performance.now() before which a tap won't start a new run. */
+let retryAllowedAt = 0;
 
-const settings = createSettings($('#mode'), $('#crash'), changed => {
-  if (changed !== 'mode') return;
+function showReady() {
   input.clear();
-  if (game.phase === 'ready') hud.showStart(settings.mode);
+  game = createGame(randomSeed());
+  hud.showStart(settings.mode, settings.zen);
+}
+
+const settings = createSettings($('#mode'), $('#zen'), changed => {
+  if (changed === 'zen') {
+    // switching zen ends the current run: no carrying a zen run into a scored one,
+    // and it's the way out of a zen run (which never ends on its own)
+    showReady();
+  } else {
+    input.clear();
+    if (game.phase === 'ready') hud.showStart(settings.mode, settings.zen);
+  }
 });
 
 const input = createInput(canvas, {
   mode: () => settings.mode,
   onAction: () => {
     if (game.phase === 'run') return false;
+    if (performance.now() < retryAllowedAt) return true; // swallow the tap
     game = createGame(randomSeed(), 'run');
     hud.hideMessage();
     return true;
@@ -39,17 +53,18 @@ startLoop({
   hz: SIM_HZ,
   maxFrameTime: MAX_FRAME_TIME,
   update(dt) {
-    if (step(game, input.intent(), dt, { crash: settings.crash }) !== 'crash') return;
+    if (step(game, input.intent(), dt, { crash: !settings.zen }) !== 'crash') return;
+    retryAllowedAt = performance.now() + UI.retryDelayMs;
     if (game.score > best) {
       best = game.score;
       storage.set(KEYS.best, String(best));
     }
-    hud.showGameOver(game.score, best);
+    hud.showGameOver(game.score, best, UI.retryDelayMs);
   },
   render(alpha) {
     renderer.draw(game, alpha);
-    hud.setScore(game.phase === 'ready' ? '' : String(game.score));
+    hud.setScore(game.phase === 'ready' || settings.zen ? '' : String(game.score));
   },
 });
 
-hud.showStart(settings.mode);
+hud.showStart(settings.mode, settings.zen);

@@ -63,6 +63,11 @@ export const SCORE = {
   pxPerPoint: 50,
 } as const;
 
+export const UI = {
+  /** After a crash, taps are ignored this long so a held/frantic tap can't skip the score. */
+  retryDelayMs: 500,
+} as const;
+
 export const INPUT = {
   /** Slide mode: px of finger travel = 90° of heading change. */
   dragPxPer90: 120,

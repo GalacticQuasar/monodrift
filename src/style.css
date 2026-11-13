@@ -49,9 +49,17 @@ canvas {
   font-size: 14px;
   color: #666;
 }
+#msg span.later {
+  animation: msg-fade-in 0.2s ease-out both;
+}
+@keyframes msg-fade-in {
+  from {
+    opacity: 0;
+  }
+}
 
 #mode,
-#crash {
+#zen {
   position: fixed;
   right: 14px;
   z-index: 2;
@@ -66,6 +74,6 @@ canvas {
 #mode {
   top: 16px;
 }
-#crash {
+#zen {
   top: 56px;
 }

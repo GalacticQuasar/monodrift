@@ -48,7 +48,7 @@ export function createInput(
   addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') keyL = true;
     else if (e.key === 'ArrowRight') keyR = true;
-    else if (e.key === ' ' || e.key === 'Enter') opts.onAction();
+    else if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) opts.onAction();
   });
   addEventListener('keyup', e => {
     if (e.key === 'ArrowLeft') keyL = false;

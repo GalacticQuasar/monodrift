@@ -7,15 +7,16 @@ const HELP: Record<SteerMode, string> = {
 
 export interface Hud {
   setScore(text: string): void;
-  showStart(mode: SteerMode): void;
-  showGameOver(score: number, best: number): void;
+  showStart(mode: SteerMode, zen: boolean): void;
+  /** `hintDelayMs`: the "tap to retry" line fades in after this long. */
+  showGameOver(score: number, best: number, hintDelayMs: number): void;
   hideMessage(): void;
 }
 
 export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
   let shownScore: string | null = null;
 
-  function message(title: string, lines: string[]) {
+  function message(title: string, lines: string[], hintDelayMs = 0) {
     const b = document.createElement('b');
     b.textContent = title;
     const span = document.createElement('span');
@@ -23,6 +24,10 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
       if (i) span.append(document.createElement('br'));
       span.append(line);
     });
+    if (hintDelayMs > 0) {
+      span.className = 'later';
+      span.style.animationDelay = `${hintDelayMs}ms`;
+    }
     msgEl.replaceChildren(b, span);
   }
 
@@ -32,11 +37,16 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
       scoreEl.textContent = text;
       shownScore = text;
     },
-    showStart(mode) {
-      message('Drift', [`${HELP[mode]} · stay on the road`, 'tap to start']);
+    showStart(mode, zen) {
+      message(
+        zen ? 'Drift · Zen' : 'Drift',
+        zen
+          ? [HELP[mode], 'no crashes, no score · just drive', 'tap to start']
+          : [`${HELP[mode]} · stay on the road`, 'tap to start'],
+      );
     },
-    showGameOver(score, best) {
-      message(String(score), [`best ${best} · tap to retry`]);
+    showGameOver(score, best, hintDelayMs) {
+      message(String(score), [`best ${best} · tap to retry`], hintDelayMs);
     },
     hideMessage() {
       msgEl.replaceChildren();

@@ -3,7 +3,7 @@
 export const KEYS = {
   best: 'drift-best',
   mode: 'drift-mode',
-  crash: 'drift-crash',
+  zen: 'drift-zen',
 } as const;
 
 export const storage = {

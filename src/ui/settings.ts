@@ -3,23 +3,25 @@ import { KEYS, storage } from '../lib/storage';
 
 export interface Settings {
   readonly mode: SteerMode;
-  readonly crash: boolean;
+  /** Zen: no crashes, no score. */
+  readonly zen: boolean;
 }
 
-/** Wires the mode and crash toggle buttons; persists choices. */
+/** Wires the mode and zen toggle buttons; persists choices. */
 export function createSettings(
   modeBtn: HTMLButtonElement,
-  crashBtn: HTMLButtonElement,
+  zenBtn: HTMLButtonElement,
   onChange: (setting: keyof Settings) => void,
 ): Settings {
   const state = {
     mode: (storage.get(KEYS.mode) === 'drag' ? 'drag' : 'sides') as SteerMode,
-    crash: storage.get(KEYS.crash) !== 'off',
+    zen: storage.get(KEYS.zen) === 'on',
   };
 
   const render = () => {
     modeBtn.textContent = state.mode === 'drag' ? 'Mode: Slide' : 'Mode: Sides';
-    crashBtn.textContent = state.crash ? 'Crash: On' : 'Crash: Off';
+    zenBtn.textContent = state.zen ? 'Zen: On' : 'Zen: Off';
+    zenBtn.setAttribute('aria-pressed', String(state.zen));
   };
 
   modeBtn.addEventListener('click', () => {
@@ -29,12 +31,12 @@ export function createSettings(
     modeBtn.blur();
     onChange('mode');
   });
-  crashBtn.addEventListener('click', () => {
-    state.crash = !state.crash;
-    storage.set(KEYS.crash, state.crash ? 'on' : 'off');
+  zenBtn.addEventListener('click', () => {
+    state.zen = !state.zen;
+    storage.set(KEYS.zen, state.zen ? 'on' : 'off');
     render();
-    crashBtn.blur();
-    onChange('crash');
+    zenBtn.blur();
+    onChange('zen');
   });
 
   render();
