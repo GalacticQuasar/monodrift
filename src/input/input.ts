@@ -13,6 +13,17 @@ export interface Input {
   clear(): void;
 }
 
+const NON_ACTION_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'ContextMenu']);
+
+/** True for keys that should count as "press any key": not modifiers, shortcuts or F-keys. */
+function isActionKey(e: KeyboardEvent): boolean {
+  if (e.ctrlKey || e.metaKey || e.altKey) return false;
+  // a focused button (reached via Tab) gets its own Enter/Space; don't also start a run
+  if (e.target instanceof HTMLElement && e.target.closest('button, input, select, textarea, a')) return false;
+  if (NON_ACTION_KEYS.has(e.key) || /^F\d+$/.test(e.key)) return false;
+  return true;
+}
+
 interface HeldPointer {
   startX: number;
   x: number;
@@ -47,8 +58,9 @@ export function createInput(
 
   addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft') keyL = true;
-    else if (e.key === 'ArrowRight') keyR = true;
-    else if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) opts.onAction();
+    if (e.key === 'ArrowRight') keyR = true;
+    // any key starts/retries, so an arrow press both starts the run and steers
+    if (!e.repeat && isActionKey(e)) opts.onAction();
   });
   addEventListener('keyup', e => {
     if (e.key === 'ArrowLeft') keyL = false;
