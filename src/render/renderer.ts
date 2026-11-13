@@ -1,8 +1,10 @@
 // Draws a GameState. Read-only: never modifies the state.
 
-import { CAR, COLORS, TRACK, VIEW } from '../config';
+import { CAR, COLORS, SCENERY, TRACK, VIEW } from '../config';
 import type { GameState } from '../sim/game';
 import { followCar } from './camera';
+import { createScenery, type Tree } from './scenery';
+import { buildTreeSprites } from './sprites';
 
 export interface Renderer {
   /** `alpha` (0..1) blends between the previous and current sim step. */
@@ -13,6 +15,8 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 export function createRenderer(canvas: HTMLCanvasElement): Renderer {
   const ctx = canvas.getContext('2d')!;
+  const scenery = createScenery();
+  const sprites = buildTreeSprites();
   let W = 0, H = 0, dpr = 1;
 
   function resize() {
@@ -37,6 +41,11 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
       ctx.fillRect(0, 0, W, H);
       const cam = followCar(cx, cy, W, H);
       ctx.translate(cam.x, cam.y);
+
+      const trees = scenery.visible(g, -cam.x, -cam.y, W - cam.x, H - cam.y);
+      ctx.imageSmoothingEnabled = false; // crisp pixel art (resets on canvas resize)
+      // tree shadows sit on the ground, under everything else
+      drawTrees(trees, 'shadow', cam);
 
       // road
       const pts = track.pts;
@@ -70,6 +79,21 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
       ctx.fillStyle = COLORS.windshield;
       ctx.fillRect(4, -5, 4, 10);
       ctx.restore();
+
+      // canopies on top, so an off-road car (zen) drives under them
+      drawTrees(trees, 'canopy', cam);
     },
   };
+
+  /** Draw tree sprites, snapped to whole device pixels so art pixels stay crisp. */
+  function drawTrees(trees: Tree[], layer: 'canopy' | 'shadow', cam: { x: number; y: number }) {
+    const S = SCENERY.pixelScale;
+    const snap = (v: number) => Math.round(v * dpr) / dpr;
+    for (const t of trees) {
+      const s = sprites[t.sprite];
+      const x = snap(t.x - s.cx * S + cam.x) - cam.x;
+      const y = snap(t.y - s.cy * S + cam.y) - cam.y;
+      ctx.drawImage(s[layer], x, y, s.w * S, s.h * S);
+    }
+  }
 }

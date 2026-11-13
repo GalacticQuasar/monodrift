@@ -81,10 +81,41 @@ export const VIEW = {
   maxDpr: 2,
 } as const;
 
+/** Decorative trees around the road (render-only; no effect on gameplay). */
+export const SCENERY = {
+  /** Trees are generated per square world cell of this size (px). */
+  cellSize: 160,
+  maxClumpsPerCell: 2,
+  maxClumpSize: 6,
+  /** Max distance (px) of a tree from its clump's centre. */
+  clumpSpread: 34,
+  /** Size of forest/clearing patches, in cells. */
+  patchCells: 4,
+  /** Density below this is a clearing. */
+  clearing: 0.3,
+  /** Canopy radii in art pixels, small to large. */
+  treeSizes: [3, 4, 5, 6, 7],
+  /** Distinct sprite shapes generated per size. */
+  variantsPerSize: 3,
+  /** Screen px per art pixel. */
+  pixelScale: 3,
+  /** Gap kept between a canopy and the road edge (px). */
+  roadMargin: 10,
+  /** Road points behind the car checked when placing trees. */
+  checkBehind: 150,
+  /** Drop cached cells once the cache holds this many. */
+  maxCachedCells: 800,
+} as const;
+
 export const COLORS = {
   ground: '#e8e8e8',
   road: '#fff',
   car: '#111',
   windshield: '#e8e8e8',
   skid: '0,0,0',
+  treeShadow: 'rgba(0,0,0,0.1)',
+  /** Pixel-art tree tones: outline, trunk, then canopy shades dark → light. */
+  treeOutline: '#4d4d4d',
+  treeTrunk: '#5e5e5e',
+  treeTones: ['#7a7a7a', '#939393', '#acacac', '#c6c6c6'],
 } as const;
