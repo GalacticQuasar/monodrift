@@ -4,6 +4,8 @@
 
 A minimal top-down drift game for desktop and mobile. Stay on the road; the
 car speeds up the longer you survive. Zen mode turns off crashes and scoring.
+Switch **Road** to *Daily* to race everyone on the same road (new one at midnight
+UTC), and pick a name to get on the **leaderboard** (today and all-time).
 
 **Play it:** [monodrift.galacticquasar.dev](https://monodrift.galacticquasar.dev). After the first
 visit it also works offline, and it can be added to a phone's home screen.
@@ -22,10 +24,26 @@ npm run dev        # dev server with hot reload
 npm test           # unit tests (sim + scenery, no browser needed)
 npm run build      # typecheck + production build into dist/
 npm run preview    # serve the production build locally
+npm run api        # leaderboard API locally (after a build); npm run dev proxies /api to it
 ```
 
-`dist/` is a static site. It's deployed to Cloudflare Workers (static assets,
-see `wrangler.jsonc`), which builds and publishes every push to `main`.
+The leaderboard API needs a `.dev.vars` file with `TICKET_SECRET=anything` for
+local runs (it signs run tickets; production uses a Wrangler secret).
+
+It's deployed to Cloudflare Workers (see `wrangler.jsonc`), which builds and
+publishes every push to `main`: the static game from `dist/`, plus a small Worker
+(`worker/`) for the leaderboard API at `/api/*`, backed by a D1 database. Schema
+changes in `migrations/` are applied with
+`npx wrangler d1 migrations apply monodrift --remote`.
+
+### Leaderboard checks
+
+There's no server-side replay (it would need more CPU than Cloudflare's free plan
+allows). Instead, starting a run fetches a signed *run ticket* recording the start
+time, and the server only accepts a score that's possible in the time since
+(`maxScoreAfter`, using the car's top speed and a corner-cutting allowance). Each
+ticket works once, submissions are rate-limited per player, and names are claimed
+with a secret stored on the device.
 
 ## Debugging performance
 
@@ -51,7 +69,8 @@ src/
     track.ts       seeded road generation + nearest-point lookup
     car.ts         car physics
     skids.ts       skid mark emission
-    scoring.ts     score rules
+    scoring.ts     score rules, and the max score possible in a given time
+    daily.ts       daily road seed (same road for everyone per UTC day)
     rng.ts         seeded RNG (mulberry32)
   input/           pointer + keyboard → SteerIntent
   render/          canvas drawing (reads state, never writes it)
@@ -60,9 +79,11 @@ src/
     scenery.ts     seeded tree placement on a world grid, kept off the road
     sprites.ts     pixel-art tree sprites + the device-scaled atlas
   ui/              DOM: HUD, settings buttons, cursor auto-hide, install card,
-                   ?debug panel
-  lib/             small helpers (guarded localStorage)
-tests/             Vitest tests for sim/ and scenery
+                   leaderboard panel + name card, ?debug panel
+  lib/             helpers: guarded localStorage, leaderboard API client, name rules
+worker/            Cloudflare Worker: leaderboard API (/api/*), run tickets
+migrations/        D1 database schema
+tests/             Vitest tests for sim/, scenery and leaderboard rules
 docs/
   art-style.md     pixel art rules and how to add new visual assets
 ```

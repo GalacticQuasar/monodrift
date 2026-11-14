@@ -9,9 +9,11 @@ const PRESS = DESKTOP ? 'press any key' : 'tap';
 
 export interface Hud {
   setScore(text: string): void;
-  showStart(mode: SteerMode, zen: boolean): void;
+  showStart(mode: SteerMode, zen: boolean, daily: boolean): void;
   /** `hintDelayMs`: the "tap/press any key to retry" line fades in after this long. */
   showGameOver(score: number, best: number, hintDelayMs: number): void;
+  /** Adds the leaderboard line (e.g. "#3 today · #12 all-time") under a game-over message. */
+  showRank(text: string): void;
   hideMessage(): void;
 }
 
@@ -39,9 +41,9 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
       scoreEl.textContent = text;
       shownScore = text;
     },
-    showStart(mode, zen) {
+    showStart(mode, zen, daily) {
       message(
-        zen ? 'Monodrift · Zen' : 'Monodrift',
+        ['Monodrift', daily && 'Daily', zen && 'Zen'].filter(Boolean).join(' · '),
         zen
           ? [HELP[mode], 'no crashes, no score · just drive', `${PRESS} to start`]
           : [`${HELP[mode]} · stay on the road`, `${PRESS} to start`],
@@ -49,6 +51,12 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
     },
     showGameOver(score, best, hintDelayMs) {
       message(String(score), [`best ${best} · ${PRESS} to retry`], hintDelayMs);
+    },
+    showRank(text) {
+      const line = document.createElement('span');
+      line.className = 'rank';
+      line.textContent = text;
+      msgEl.append(line);
     },
     hideMessage() {
       msgEl.replaceChildren();

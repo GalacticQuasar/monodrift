@@ -24,7 +24,9 @@ export function autoHideCursor(root: HTMLElement = document.body) {
   addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse' && !overButton(e)) hideNow();
   });
-  addEventListener('keydown', hideNow);
+  addEventListener('keydown', e => {
+    if (!(e.target instanceof HTMLInputElement)) hideNow(); // not while typing a name
+  });
 
   timer = setTimeout(hide, UI.cursorHideMs);
 }

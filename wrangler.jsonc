@@ -1,8 +1,21 @@
-// Cloudflare Workers deploy: serves the static build in dist/ (no Worker script).
+// Cloudflare Workers deploy: the static build in dist/, plus a small Worker for the
+// leaderboard API (/api/* only; every other request is served from dist/ directly).
 {
   "name": "monodrift",
   "compatibility_date": "2026-11-01",
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "monodrift",
+      "database_id": "914f1d1c-d923-42c1-8592-b0db5465d1bd",
+      "migrations_dir": "migrations",
+    },
+  ],
+  // TICKET_SECRET: set with `npx wrangler secret put TICKET_SECRET` (locally: .dev.vars)
 }

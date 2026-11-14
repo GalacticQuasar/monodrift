@@ -42,4 +42,6 @@ function serviceWorker(): Plugin {
 
 export default defineConfig({
   plugins: [serviceWorker()],
+  // the leaderboard API runs in `npx wrangler dev` (local Worker + local database)
+  server: { proxy: { '/api': 'http://localhost:8787' } },
 });

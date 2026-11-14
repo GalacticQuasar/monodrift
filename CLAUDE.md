@@ -7,7 +7,10 @@ no framework, canvas 2D. See `README.md` for the file layout.
 
 - `npm run dev`: dev server · `npm test`: Vitest (sim + scenery, no browser)
 - `npm run build`: typecheck + production build into `dist/` (static site)
-- `npx tsc`: typecheck only
+- `npm run typecheck`: typecheck the game (`tsc`) and the Worker (`tsc -p worker`)
+- `npm run api`: leaderboard API locally (local Worker + local D1 database on :8787;
+  build first, `npm run dev` proxies `/api` to it). Needs `.dev.vars` with
+  `TICKET_SECRET=...` (gitignored)
 
 ## Architecture rules
 
@@ -18,6 +21,10 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - `src/input/` turns events into a `SteerIntent`; `src/ui/` is DOM (HUD,
   settings, debug panel). `src/main.ts` wires them together.
 - All tuning numbers live in `src/config.ts`.
+- Leaderboard: `worker/` is the Cloudflare Worker for `/api/*` (D1 database,
+  schema in `migrations/`). It shares pure code with the game (`sim/daily.ts`,
+  `sim/scoring.ts` `maxScoreAfter`, `lib/names.ts`). No replays: a signed run ticket
+  times each run and caps the score (see `SCORE.maxProgressPerPx`).
 - Offline: `src/sw.js` is a service worker template; the plugin in
   `vite.config.ts` fills in the file list and version at build time. It only runs
   in production builds (test offline with `npm run build && npm run preview`).
@@ -42,7 +49,7 @@ placement pipeline.
 
 ## Verifying changes
 
-- Run `npx tsc` and `npm test` after code changes.
+- Run `npm run typecheck` and `npm test` after code changes.
 - For anything visual or input-related, check it in a real browser
   (playwright-cli is available), including a phone-sized viewport.
 - Conventional Commits for commit messages.

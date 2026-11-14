@@ -68,6 +68,14 @@ export const SKIDS = {
 export const SCORE = {
   /** World px of progress per point. */
   pxPerPoint: 50,
+  /**
+   * Leaderboard check: road progress per px the car drives, at most. Cutting the
+   * inside of bends lets progress outpace driving (the tightest bend's inside edge
+   * is ~1.7x shorter than the centreline), but bends alternate: a corner-cutting
+   * autopilot averages under 1.0 (tests/leaderboard-rules.test.ts). Scores above
+   * what this allows for the measured time are rejected.
+   */
+  maxProgressPerPx: 1.4,
 } as const;
 
 export const UI = {

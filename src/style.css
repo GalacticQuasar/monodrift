@@ -64,7 +64,9 @@ canvas {
 }
 
 #mode,
-#zen {
+#zen,
+#road,
+#lb {
   position: fixed;
   right: 14px;
   z-index: 2;
@@ -85,12 +87,31 @@ canvas {
 #mode[hidden] {
   display: none;
 }
+#road {
+  top: 96px;
+}
 #mode[hidden] + #zen {
   top: 16px;
 }
+#mode[hidden] ~ #road {
+  top: 56px;
+}
+#lb {
+  top: 16px;
+  right: auto;
+  left: 14px;
+}
+#msg .rank {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+}
 
-/* "add to home screen" card (phones), above the bottom edge */
-#install {
+/* "add to home screen" and leaderboard-name cards, above the bottom edge */
+#install,
+#join {
   position: fixed;
   left: 16px;
   right: 16px;
@@ -136,4 +157,166 @@ canvas {
   color: #fff;
   background: #111;
   border-color: #111;
+}
+#join[hidden] {
+  display: none;
+}
+#join b {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+#join p {
+  margin: 4px 0 10px;
+  color: #555;
+}
+
+/* name form (name card and board panel) */
+.name-form .row {
+  display: flex;
+  gap: 8px;
+}
+.name-form input {
+  flex: 1;
+  min-width: 0;
+  font: 16px -apple-system, system-ui, sans-serif; /* 16px: iOS doesn't zoom in on focus */
+  color: #111;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.name-form button,
+#board button {
+  font: 500 14px -apple-system, system-ui, sans-serif;
+  color: #111;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 16px;
+  padding: 7px 14px;
+  touch-action: manipulation;
+}
+.name-form button.primary,
+#board .name-form button.primary {
+  color: #fff;
+  background: #111;
+  border-color: #111;
+}
+.name-form .error {
+  margin: 6px 0 0;
+  min-height: 1em;
+  font-size: 13px;
+  color: #111;
+  font-weight: 600;
+}
+
+/* leaderboard panel */
+#board {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.25);
+}
+#board[hidden] {
+  display: none;
+}
+#board .box {
+  width: 100%;
+  max-width: 380px;
+  max-height: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+#board .head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 17px;
+}
+#board .close {
+  border: none;
+  padding: 0 4px;
+  font-size: 24px;
+  line-height: 1;
+}
+#board .tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+#board .tabs button[aria-pressed='true'] {
+  color: #fff;
+  background: #111;
+  border-color: #111;
+}
+#board .note {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  color: #666;
+}
+#board .list {
+  flex: 1;
+  min-height: 80px;
+  overflow-y: auto;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+}
+#board ol {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+#board li {
+  display: flex;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: 8px;
+}
+#board li.me {
+  background: #ececec;
+  font-weight: 600;
+}
+#board li.gap {
+  justify-content: center;
+  color: #999;
+}
+#board .rank {
+  width: 2.5em;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+}
+#board .name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#board .score {
+  font-variant-numeric: tabular-nums;
+}
+#board .status {
+  margin: 16px 0;
+  text-align: center;
+  color: #666;
+}
+#board .you p {
+  margin: 10px 0 6px;
+  color: #555;
+}
+#board .link {
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  color: #111;
 }

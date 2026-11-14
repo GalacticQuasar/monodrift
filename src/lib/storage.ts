@@ -8,6 +8,12 @@ export const KEYS = {
   runs: 'monodrift-runs',
   /** 'done' once the install card was used or dismissed. */
   install: 'monodrift-install',
+  /** 'daily' to drive the daily road. */
+  road: 'monodrift-road',
+  /** Leaderboard identity: JSON {id, token, name}. */
+  player: 'monodrift-player',
+  /** 'skipped' once the name prompt after a run was skipped. */
+  namePrompt: 'monodrift-name-prompt',
 } as const;
 
 export const storage = {

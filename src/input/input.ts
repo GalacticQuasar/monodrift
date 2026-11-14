@@ -24,6 +24,9 @@ function isActionKey(e: KeyboardEvent): boolean {
   return true;
 }
 
+/** Keys pressed while typing in a text field (e.g. the leaderboard name) aren't game input. */
+const typing = (e: KeyboardEvent) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+
 // A/D by physical key position (e.code), so they sit under the left hand on any layout
 const isLeft = (e: KeyboardEvent) => e.key === 'ArrowLeft' || e.code === 'KeyA';
 const isRight = (e: KeyboardEvent) => e.key === 'ArrowRight' || e.code === 'KeyD';
@@ -63,6 +66,7 @@ export function createInput(
   target.addEventListener('pointerleave', release);
 
   addEventListener('keydown', e => {
+    if (typing(e)) return;
     if (isLeft(e)) keyL = true;
     if (isRight(e)) keyR = true;
     // any key starts/retries, so an arrow press both starts the run and steers

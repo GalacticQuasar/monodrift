@@ -5,11 +5,14 @@ import { DESKTOP } from './lib/device';
 import { KEYS, storage } from './lib/storage';
 import { startLoop } from './loop';
 import { createRenderer } from './render/renderer';
+import { api } from './lib/api';
+import { dailySeed, utcDay } from './sim/daily';
 import { createGame, step } from './sim/game';
 import { autoHideCursor } from './ui/cursor';
 import { createDebug, debugLayers } from './ui/debug';
 import { createHud } from './ui/hud';
 import { createInstallPrompt } from './ui/install';
+import { createLeaderboard } from './ui/leaderboard';
 import { createSettings } from './ui/settings';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -22,29 +25,40 @@ const hud = createHud($('#score'), $('#msg'));
 const debug = createDebug();
 autoHideCursor();
 const install = createInstallPrompt($('#install'));
+const leaderboard = createLeaderboard({
+  button: $('#lb'),
+  panel: $('#board'),
+  card: $('#join'),
+  onCardShown: () => install.hide(),
+});
 
 let best = Number(storage.get(KEYS.best)) || 0;
-let game = createGame(randomSeed());
 /** performance.now() before which a tap won't start a new run. */
 let retryAllowedAt = 0;
+/** Leaderboard ticket for the current run (null: zen, or offline when it started). */
+let ticket: Promise<string | null> = Promise.resolve(null);
 
 function showReady() {
   input.clear();
-  game = createGame(randomSeed());
-  hud.showStart(settings.mode, settings.zen);
+  game = createGame(roadSeed());
+  hud.showStart(settings.mode, settings.zen, settings.daily);
   install.maybeShow();
 }
 
-const settings = createSettings($('#mode'), $('#zen'), changed => {
-  if (changed === 'zen') {
-    // switching zen ends the current run: no carrying a zen run into a scored one,
-    // and it's the way out of a zen run (which never ends on its own)
+const settings = createSettings($('#mode'), $('#zen'), $('#road'), changed => {
+  if (changed === 'zen' || changed === 'daily') {
+    // ends the current run: no carrying a zen run into a scored one (zen runs never
+    // end on their own, so this is the way out), and a new road needs a new run
     showReady();
   } else {
     input.clear();
-    if (game.phase === 'ready') hud.showStart(settings.mode, settings.zen);
+    if (game.phase === 'ready') hud.showStart(settings.mode, settings.zen, settings.daily);
   }
 });
+
+/** Today's road (same for everyone, by UTC day) or a random one. */
+const roadSeed = () => (settings.daily ? dailySeed(utcDay(Date.now())) : randomSeed());
+let game = createGame(roadSeed());
 
 // desktop steers with the keyboard only, so the touch steering mode doesn't apply
 $('#mode').hidden = DESKTOP;
@@ -53,12 +67,15 @@ const input = createInput(canvas, {
   mode: () => settings.mode,
   pointerSteer: !DESKTOP,
   onAction: () => {
-    if (game.phase === 'run') return false;
+    if (game.phase === 'run' || leaderboard.open) return false;
     if (performance.now() < retryAllowedAt) return true; // swallow the tap
     // from the start screen, drive the road already on screen; a retry gets a new one
-    game = createGame(game.phase === 'ready' ? game.seed : randomSeed(), 'run');
+    game = createGame(game.phase === 'ready' ? game.seed : roadSeed(), 'run');
+    // the server times the run from here, which caps the score it will accept
+    ticket = settings.zen ? Promise.resolve(null) : api.ticket(game.seed, settings.daily).catch(() => null);
     hud.hideMessage();
     install.runStarted();
+    leaderboard.runStarted();
     debug?.event('start');
     return true;
   },
@@ -74,6 +91,10 @@ function tick(dt: number) {
   }
   hud.showGameOver(game.score, best, UI.retryDelayMs);
   install.maybeShow();
+  const ended = game;
+  leaderboard.runEnded(ticket, game.score, text => {
+    if (game === ended) hud.showRank(text); // still on this run's game-over screen
+  });
   if (debug) {
     debug.event(newBest ? 'crash (new best saved)' : 'crash');
     setTimeout(() => debug.event('retry hint fades in'), UI.retryDelayMs);
@@ -107,7 +128,7 @@ startLoop({
   },
 });
 
-hud.showStart(settings.mode, settings.zen);
+hud.showStart(settings.mode, settings.zen, settings.daily);
 // beforeinstallprompt usually arrives shortly after load, so check again then
 addEventListener('load', () => setTimeout(() => game.phase === 'ready' && install.maybeShow(), 1000));
 

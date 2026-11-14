@@ -16,6 +16,7 @@ export interface InstallPrompt {
   runStarted(): void;
   /** On a menu screen (start or game over): show the card if it's due. */
   maybeShow(): void;
+  hide(): void;
 }
 
 const PHONE = matchMedia('(pointer: coarse)').matches;
@@ -80,6 +81,7 @@ export function createInstallPrompt(el: HTMLElement): InstallPrompt {
   }
 
   return {
+    hide,
     runStarted() {
       storage.set(KEYS.runs, String((Number(storage.get(KEYS.runs)) || 0) + 1));
       hide();
