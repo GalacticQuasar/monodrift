@@ -1,5 +1,7 @@
 # Monodrift
 
+[![Monodrift: a car drifting around a bend between pixel-art trees](public/og.png)](https://monodrift.galacticquasar.dev)
+
 A minimal top-down drift game for desktop and mobile. Stay on the road; the
 car speeds up the longer you survive. Zen mode turns off crashes and scoring.
 
@@ -61,7 +63,6 @@ src/
 tests/             Vitest tests for sim/ and scenery
 docs/
   art-style.md     pixel art rules and how to add new visual assets
-prototype/         the original single-file version, for reference
 ```
 
 **Rule of thumb:** `sim/` never touches the DOM, the clock, or `Math.random`.
