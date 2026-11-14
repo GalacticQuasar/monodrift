@@ -47,7 +47,8 @@ const input = createInput(canvas, {
   onAction: () => {
     if (game.phase === 'run') return false;
     if (performance.now() < retryAllowedAt) return true; // swallow the tap
-    game = createGame(randomSeed(), 'run');
+    // from the start screen, drive the road already on screen; a retry gets a new one
+    game = createGame(game.phase === 'ready' ? game.seed : randomSeed(), 'run');
     hud.hideMessage();
     debug?.event('start');
     return true;
