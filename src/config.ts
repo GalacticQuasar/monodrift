@@ -1,4 +1,4 @@
-// All gameplay tuning lives here. Values match the original prototype.
+// All gameplay tuning lives here.
 
 /** Physics steps per second. Rendering runs at display rate and interpolates. */
 export const SIM_HZ = 120;
