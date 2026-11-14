@@ -1,6 +1,6 @@
 ---
 name: patch-notes
-description: Make Monodrift patch notes / an update for players and friends (what's new since a date or since the last notes). They go on the website at /updates (from docs/patch-notes.md), plus paste-ready text; an artifact page only if asked. Use when the user asks for patch notes, an update post, a changelog to share, or "what's new" for friends.
+description: Make Monodrift patch notes / an update for players and friends (what's new since a date or since the last notes). They go on the website at /updates (from docs/patch-notes.md), plus paste-ready text. Use when the user asks for patch notes, an update post, a changelog to share, or "what's new" for friends.
 ---
 
 # Monodrift patch notes
@@ -82,12 +82,4 @@ What's new: https://monodrift.galacticquasar.dev/updates
 - Give the paste-ready text in the reply: bold headers and dashes, with the play
   link and the `/updates` link at the top (the same text as the entry, minus the
   internal bullets).
-- **Artifact page (optional, only if the user asks for one):** copy `template.html`
-  (next to this file) to the scratchpad and fill in `{{INTRO}}` (one sentence),
-  `{{SECTIONS}}` (one `<section><h2>…</h2><ul><li><b>Name.</b> Text.</li></ul></section>`
-  per section) and `{{IMAGE_BASE64}}` (a gameplay shot, shrunk to 900×472 greyscale
-  JPEG with `uv run --no-project --with pillow`, then `base64 -w0`; artifact pages
-  can't load images from other sites). Update the image's alt text to match the shot.
-  Publish with the Artifact tool (`icon: "car"`, a one-sentence `description`). It's
-  private: friends can't open it until it's shared from the page's Share menu. Add a
-  `- Page: <url>` bullet to the entry's internal bullets.
+- No artifact page: the website is the only place the notes live.

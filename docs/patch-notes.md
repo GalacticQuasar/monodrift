@@ -9,7 +9,6 @@ in-game "updated" card: keep the entry format the skill describes.
 
 - Covers: `83924b4` to `2c0f0e7` (Settings, retro look, phone icons, dark mode, pause)
 - Last commit: `2c0f0e7`
-- Page: https://claude.ai/artifact/RpNz5hxRAKuqe4NHbjTjQh
 
 **Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
 What's new: https://monodrift.galacticquasar.dev/updates
@@ -32,7 +31,6 @@ What's new: https://monodrift.galacticquasar.dev/updates
 
 - Covers: everything from `a06b2f5` (migration to Vite + TypeScript) on
 - Last commit: `8862b09`
-- Page: https://claude.ai/artifact/5BY9ZZR26MBHcuJAaRXVos
 
 **Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
 
