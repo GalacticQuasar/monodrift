@@ -24,6 +24,10 @@ function isActionKey(e: KeyboardEvent): boolean {
   return true;
 }
 
+// A/D by physical key position (e.code), so they sit under the left hand on any layout
+const isLeft = (e: KeyboardEvent) => e.key === 'ArrowLeft' || e.code === 'KeyA';
+const isRight = (e: KeyboardEvent) => e.key === 'ArrowRight' || e.code === 'KeyD';
+
 interface HeldPointer {
   startX: number;
   x: number;
@@ -36,6 +40,8 @@ export function createInput(
     mode: () => SteerMode;
     /** Called on tap / Space / Enter. Return true if it was consumed (e.g. started a run). */
     onAction: () => boolean;
+    /** Whether holding/dragging a pointer steers (touch); otherwise it only starts runs. */
+    pointerSteer: boolean;
   },
 ): Input {
   const pointers = new Map<number, HeldPointer>();
@@ -44,7 +50,7 @@ export function createInput(
 
   target.addEventListener('pointerdown', e => {
     e.preventDefault();
-    if (opts.onAction()) return;
+    if (opts.onAction() || !opts.pointerSteer) return;
     pointers.set(e.pointerId, { startX: e.clientX, x: e.clientX, gesture: nextGesture++ });
   });
   target.addEventListener('pointermove', e => {
@@ -57,14 +63,14 @@ export function createInput(
   target.addEventListener('pointerleave', release);
 
   addEventListener('keydown', e => {
-    if (e.key === 'ArrowLeft') keyL = true;
-    if (e.key === 'ArrowRight') keyR = true;
+    if (isLeft(e)) keyL = true;
+    if (isRight(e)) keyR = true;
     // any key starts/retries, so an arrow press both starts the run and steers
     if (!e.repeat && isActionKey(e)) opts.onAction();
   });
   addEventListener('keyup', e => {
-    if (e.key === 'ArrowLeft') keyL = false;
-    if (e.key === 'ArrowRight') keyR = false;
+    if (isLeft(e)) keyL = false;
+    if (isRight(e)) keyR = false;
   });
   addEventListener('contextmenu', e => e.preventDefault());
   // A finger held still counts as a long press, and phones vibrate when they spot one

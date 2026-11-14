@@ -82,6 +82,12 @@ canvas {
 #zen {
   top: 56px;
 }
+#mode[hidden] {
+  display: none;
+}
+#mode[hidden] + #zen {
+  top: 16px;
+}
 
 /* "add to home screen" card (phones), above the bottom edge */
 #install {

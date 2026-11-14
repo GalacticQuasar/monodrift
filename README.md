@@ -10,8 +10,7 @@ visit it also works offline, and it can be added to a phone's home screen.
 
 ## Controls
 
-- **Desktop:** ← → to steer (or hold the left/right half of the screen); any
-  key starts or retries.
+- **Desktop:** ← → or A/D to steer; any key (or a click) starts or retries.
 - **Mobile:** hold the left/right side to steer, or switch to *Slide* mode and
   drag to aim. Tap to start.
 

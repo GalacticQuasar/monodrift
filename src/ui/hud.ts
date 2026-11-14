@@ -1,10 +1,8 @@
 import type { SteerMode } from '../input/input';
-
-/** Mouse/trackpad + keyboard device (laptop/desktop) vs touch. */
-const DESKTOP = matchMedia('(hover: hover) and (pointer: fine)').matches;
+import { DESKTOP } from '../lib/device';
 
 const HELP: Record<SteerMode, string> = DESKTOP
-  ? { sides: '← → or hold either side to steer', drag: '← → or click and drag to aim the car' }
+  ? { sides: '← → or A/D to steer', drag: '← → or A/D to steer' } // no steering modes on desktop
   : { sides: 'hold left or right side to steer', drag: 'hold and slide left or right to aim the car' };
 
 const PRESS = DESKTOP ? 'press any key' : 'tap';

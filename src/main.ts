@@ -1,6 +1,7 @@
 import './style.css';
 import { MAX_FRAME_TIME, SIM_HZ, UI } from './config';
 import { createInput } from './input/input';
+import { DESKTOP } from './lib/device';
 import { KEYS, storage } from './lib/storage';
 import { startLoop } from './loop';
 import { createRenderer } from './render/renderer';
@@ -45,8 +46,12 @@ const settings = createSettings($('#mode'), $('#zen'), changed => {
   }
 });
 
+// desktop steers with the keyboard only, so the touch steering mode doesn't apply
+$('#mode').hidden = DESKTOP;
+
 const input = createInput(canvas, {
   mode: () => settings.mode,
+  pointerSteer: !DESKTOP,
   onAction: () => {
     if (game.phase === 'run') return false;
     if (performance.now() < retryAllowedAt) return true; // swallow the tap
