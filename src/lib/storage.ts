@@ -1,9 +1,12 @@
 // localStorage can throw (private mode, blocked storage), so every access is guarded.
 
 export const KEYS = {
+  /** Best score at Normal speed (Slow/Fast keep their own: `monodrift-best-slow`/`-fast`). */
   best: 'monodrift-best',
   mode: 'monodrift-mode',
   zen: 'monodrift-zen',
+  /** Speed setting: 'slow', 'normal' (also when unset) or 'fast'. */
+  speed: 'monodrift-speed',
   /** Runs started, ever (for the install card). */
   runs: 'monodrift-runs',
   /** 'done' once the install card was used or dismissed. */

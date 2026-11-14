@@ -87,6 +87,16 @@ export const UI = {
   installPromptAfterRuns: 3,
 } as const;
 
+/**
+ * Speed setting: game-speed multiplier (the sim runs this much faster/slower, so the
+ * car's lines through bends stay the same). Only Normal runs go on the leaderboard.
+ */
+export const SPEED = {
+  slow: 0.8,
+  normal: 1,
+  fast: 1.25,
+} as const;
+
 export const INPUT = {
   /** Slide mode: px of finger travel = 90° of heading change. */
   dragPxPer90: 120,

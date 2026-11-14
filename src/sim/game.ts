@@ -21,6 +21,8 @@ export type SteerIntent =
 export interface Rules {
   /** When false, leaving the road doesn't end the run. */
   crash: boolean;
+  /** Game-speed multiplier (Speed setting); 1 when left out. */
+  speed?: number;
 }
 
 export interface GameState {
@@ -52,6 +54,7 @@ export function createGame(seed: number, phase: Phase = 'ready'): GameState {
 /** Advance the game by `dt` seconds. Mutates `g`; returns an event if one happened. */
 export function step(g: GameState, intent: SteerIntent, dt: number, rules: Rules): StepEvent | null {
   if (g.phase !== 'run') return null;
+  dt *= rules.speed ?? 1;
 
   updateCar(g.car, resolveSteer(g, intent), dt);
 

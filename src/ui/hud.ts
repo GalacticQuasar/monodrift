@@ -1,5 +1,6 @@
 import type { SteerMode } from '../input/input';
 import { DESKTOP } from '../lib/device';
+import type { Speed } from './settings';
 
 const HELP: Record<SteerMode, string> = DESKTOP
   ? { sides: '← → or A/D to steer', drag: '← → or A/D to steer' } // no steering modes on desktop
@@ -9,7 +10,7 @@ const PRESS = DESKTOP ? 'press any key' : 'tap';
 
 export interface Hud {
   setScore(text: string): void;
-  showStart(mode: SteerMode, zen: boolean, daily: boolean): void;
+  showStart(mode: SteerMode, zen: boolean, daily: boolean, speed: Speed): void;
   /** `hintDelayMs`: the "tap/press any key to retry" line fades in after this long. */
   showGameOver(score: number, best: number, hintDelayMs: number): void;
   /** The run is paused (Settings was opened mid-run). */
@@ -43,12 +44,13 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
       scoreEl.textContent = text;
       shownScore = text;
     },
-    showStart(mode, zen, daily) {
+    showStart(mode, zen, daily, speed) {
+      const pace = speed === 'slow' ? 'Slow' : speed === 'fast' ? 'Fast' : '';
       message(
-        ['Monodrift', daily && 'Daily', zen && 'Zen'].filter(Boolean).join(' · '),
+        ['Monodrift', daily && 'Daily', zen && 'Zen', pace].filter(Boolean).join(' · '),
         zen
           ? [HELP[mode], 'no crashes, no score · just drive', `${PRESS} to start`]
-          : [`${HELP[mode]} · stay on the road`, `${PRESS} to start`],
+          : [`${HELP[mode]} · stay on the road`, ...(pace ? [`${pace} speed · not ranked`] : []), `${PRESS} to start`],
       );
     },
     showGameOver(score, best, hintDelayMs) {

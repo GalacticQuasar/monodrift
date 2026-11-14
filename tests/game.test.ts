@@ -26,6 +26,16 @@ describe('game', () => {
     expect(run()).toEqual(run());
   });
 
+  it('speed scales game time: a step at speed 1.25 = a step 1.25x as long', () => {
+    const run = (dt: number, speed?: number) => {
+      const g = createGame(7, 'run');
+      for (let i = 0; i < 600; i++) step(g, scripted(i), dt, { crash: false, speed });
+      return { car: g.car, score: g.score, trackIndex: g.trackIndex };
+    };
+    expect(run(DT, 1.25)).toEqual(run(DT * 1.25));
+    expect(run(DT, 1)).toEqual(run(DT));
+  });
+
   it('scores distance travelled on a straight', () => {
     const g = createGame(5, 'run');
     for (let i = 0; i < 60; i++) step(g, { kind: 'rate', rate: 0 }, DT, ON);

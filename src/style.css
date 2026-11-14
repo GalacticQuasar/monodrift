@@ -284,9 +284,10 @@ button:disabled {
 }
 #settings .row {
   display: flex;
+  flex-wrap: wrap; /* a row too wide for a 320 px phone (Speed) puts its buttons on a second line */
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px 10px;
 }
 #settings .label {
   font: 16px var(--pixel);
@@ -295,6 +296,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-left: auto;
 }
 #settings .seg button {
   min-width: 76px;
@@ -316,6 +318,13 @@ button:disabled {
 }
 #settings .meter i.on {
   background: var(--ink);
+}
+/* three-choice rows (Speed, Dark): a bit narrower so Speed fits one line on most phones */
+@media (min-width: 381px) {
+  #settings .seg:has(> button:nth-of-type(3)) button {
+    min-width: 64px;
+    padding-inline: 10px;
+  }
 }
 /* Silkscreen is wide: tighten the rows so they fit a 320 px phone */
 @media (max-width: 380px) {
@@ -341,6 +350,13 @@ button:disabled {
   }
 }
 
+#settings .speed-note {
+  margin: -6px 0 0; /* close under the Speed buttons (the rows' gap is 12px) */
+  text-align: right;
+}
+#settings .speed-note[hidden] {
+  display: none;
+}
 #settings .foot {
   display: flex;
   flex-wrap: wrap;

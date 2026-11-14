@@ -1,7 +1,7 @@
-// Settings: the Settings button and its panel (road, zen, steering mode, sensitivity,
-// trees). Choices are saved in localStorage and apply right away.
+// Settings: the Settings button and its panel (road, zen, speed, steering mode,
+// sensitivity, trees, dark). Choices are saved in localStorage and apply right away.
 
-import { INPUT } from '../config';
+import { INPUT, SPEED } from '../config';
 import type { SteerMode } from '../input/input';
 import { DESKTOP } from '../lib/device';
 import { KEYS, storage } from '../lib/storage';
@@ -11,6 +11,8 @@ export interface Settings {
   readonly mode: SteerMode;
   /** Zen: no crashes, no score. */
   readonly zen: boolean;
+  /** Game speed; only Normal runs are ranked. */
+  readonly speed: Speed;
   /** Drive the daily road (same for everyone each UTC day) instead of a random one. */
   readonly daily: boolean;
   /** Steering sensitivity level, 1..INPUT.sensitivity.length (middle = default). */
@@ -20,6 +22,10 @@ export interface Settings {
   /** Dark mode: follow the device, or always on/off. */
   readonly dark: DarkSetting;
 }
+
+export type Speed = keyof typeof SPEED;
+
+const parseSpeed = (v: string | null): Speed => (v === 'slow' || v === 'fast' ? v : 'normal');
 
 export interface SettingsPanel extends Settings {
   /** True while the panel is open (game input should be ignored). */
@@ -54,6 +60,7 @@ export function createSettings(
   const state = {
     mode: (storage.get(KEYS.mode) === 'drag' ? 'drag' : 'sides') as SteerMode,
     zen: storage.get(KEYS.zen) === 'on',
+    speed: parseSpeed(storage.get(KEYS.speed)),
     daily: storage.get(KEYS.road) === 'daily',
     sensitivity: loadLevel(),
     trees: storage.get(KEYS.trees) !== 'off',
@@ -106,6 +113,10 @@ export function createSettings(
     return el('div', { className: 'row' }, el('span', { className: 'label', textContent: 'Sensitivity' }), el('div', { className: 'seg' }, less, meter, more));
   }
 
+  /** Under the Speed row while Slow/Fast is picked, so the switch away from Normal is noticed. */
+  const speedNote = el('p', { className: 'note speed-note', textContent: 'Not ranked: only Normal speed is.' });
+  refreshers.push(() => (speedNote.hidden = state.speed === 'normal'));
+
   const closeBtn = el('button', { type: 'button', className: 'close', textContent: '×', ariaLabel: 'Close' });
   closeBtn.addEventListener('click', close);
 
@@ -136,6 +147,21 @@ export function createSettings(
         onChange('zen');
       },
     ),
+    choice<Speed>(
+      'Speed',
+      [
+        ['slow', 'Slow'],
+        ['normal', 'Normal'],
+        ['fast', 'Fast'],
+      ],
+      () => state.speed,
+      v => {
+        state.speed = v;
+        storage.set(KEYS.speed, v);
+        onChange('speed');
+      },
+    ),
+    speedNote,
     // desktop steers with the keyboard only, so the touch steering mode doesn't apply
     ...(DESKTOP
       ? []
@@ -189,7 +215,7 @@ export function createSettings(
     { className: 'box', role: 'dialog', ariaModal: 'true', ariaLabel: 'Settings' },
     el('div', { className: 'head' }, el('b', { textContent: 'Settings' }), closeBtn),
     el('div', { className: 'rows' }, ...rows),
-    el('div', { className: 'foot' }, el('p', { className: 'note', textContent: 'Changing Road or Zen starts over.' }), el('a', { href: '/updates', textContent: "What's new" })),
+    el('div', { className: 'foot' }, el('p', { className: 'note', textContent: 'Changing Road, Zen or Speed starts over.' }), el('a', { href: '/updates', textContent: "What's new" })),
   );
   panel.replaceChildren(box);
   refresh();
@@ -223,6 +249,9 @@ export function createSettings(
     },
     get zen() {
       return state.zen;
+    },
+    get speed() {
+      return state.speed;
     },
     get daily() {
       return state.daily;

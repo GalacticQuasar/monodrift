@@ -1,5 +1,5 @@
 import './style.css';
-import { COLORS, MAX_FRAME_TIME, SIM_HZ, UI } from './config';
+import { COLORS, MAX_FRAME_TIME, SIM_HZ, SPEED, UI } from './config';
 import { createInput } from './input/input';
 import { DESKTOP } from './lib/device';
 import { KEYS, storage } from './lib/storage';
@@ -41,21 +41,25 @@ const leaderboard = createLeaderboard({
   },
 });
 
-let best = Number(storage.get(KEYS.best)) || 0;
+/** Local best is kept per speed, so Slow runs don't set the Normal best. */
+const bestKey = () => (settings.speed === 'normal' ? KEYS.best : `${KEYS.best}-${settings.speed}`);
+const loadBest = () => Number(storage.get(bestKey())) || 0;
 /** performance.now() before which a tap won't start a new run. */
 let retryAllowedAt = 0;
 /** Run frozen because Settings was opened mid-run; the next tap/key after it closes resumes. */
 let paused = false;
-/** Leaderboard ticket for the current run (null: zen, or offline when it started). */
+/** Leaderboard ticket for the current run (null: zen, not Normal speed, or offline when it started). */
 let ticket: Promise<string | null> = Promise.resolve(null);
 
 function showReady() {
   paused = false;
   input.clear();
   game = createGame(roadSeed());
-  hud.showStart(settings.mode, settings.zen, settings.daily);
+  showStart();
   menuCards();
 }
+
+const showStart = () => hud.showStart(settings.mode, settings.zen, settings.daily, settings.speed);
 
 /** Cards in the bottom spot on a menu screen: "updated" first, else "add to home screen". */
 function menuCards() {
@@ -63,13 +67,13 @@ function menuCards() {
 }
 
 const settings = createSettings($('#settings-btn'), $('#settings'), changed => {
-  if (changed === 'zen' || changed === 'daily') {
-    // ends the current run: no carrying a zen run into a scored one (zen runs never
-    // end on their own, so this is the way out), and a new road needs a new run
+  if (changed === 'zen' || changed === 'daily' || changed === 'speed') {
+    // ends the current run: no carrying a zen or Slow run into a scored one (zen runs
+    // never end on their own, so this is the way out), and a new road needs a new run
     showReady();
   } else if (changed === 'mode') {
     input.clear();
-    if (game.phase === 'ready') hud.showStart(settings.mode, settings.zen, settings.daily);
+    if (game.phase === 'ready') showStart();
   } else if (changed === 'trees') {
     applyTrees();
   } else if (changed === 'dark') {
@@ -100,6 +104,7 @@ applyTrees();
 /** Today's road (same for everyone, by UTC day) or a random one. */
 const roadSeed = () => (settings.daily ? dailySeed(utcDay(Date.now())) : randomSeed());
 let game = createGame(roadSeed());
+let best = loadBest();
 
 const input = createInput(canvas, {
   mode: () => settings.mode,
@@ -118,7 +123,8 @@ const input = createInput(canvas, {
     // from the start screen, drive the road already on screen; a retry gets a new one
     game = createGame(game.phase === 'ready' ? game.seed : roadSeed(), 'run');
     // the server times the run from here, which caps the score it will accept
-    ticket = settings.zen ? Promise.resolve(null) : api.ticket(game.seed, settings.daily).catch(() => null);
+    best = loadBest();
+    ticket = settings.zen || settings.speed !== 'normal' ? Promise.resolve(null) : api.ticket(game.seed, settings.daily).catch(() => null);
     hud.hideMessage();
     install.runStarted();
     news.hide();
@@ -130,12 +136,12 @@ const input = createInput(canvas, {
 
 function tick(dt: number) {
   if (paused) return;
-  if (step(game, input.intent(), dt, { crash: !settings.zen }) !== 'crash') return;
+  if (step(game, input.intent(), dt, { crash: !settings.zen, speed: SPEED[settings.speed] }) !== 'crash') return;
   retryAllowedAt = performance.now() + UI.retryDelayMs;
   const newBest = game.score > best;
   if (newBest) {
     best = game.score;
-    storage.set(KEYS.best, String(best));
+    storage.set(bestKey(), String(best));
   }
   hud.showGameOver(game.score, best, UI.retryDelayMs);
   menuCards();
@@ -176,7 +182,7 @@ startLoop({
   },
 });
 
-hud.showStart(settings.mode, settings.zen, settings.daily);
+showStart();
 menuCards();
 // beforeinstallprompt usually arrives shortly after load, so check again then
 addEventListener('load', () => setTimeout(() => game.phase === 'ready' && menuCards(), 1000));
