@@ -67,6 +67,10 @@ export function createInput(
     if (e.key === 'ArrowRight') keyR = false;
   });
   addEventListener('contextmenu', e => e.preventDefault());
+  // A finger held still counts as a long press, and phones vibrate when they spot one
+  // (Android Chrome's haptic tick), even with the context menu suppressed. Cancelling
+  // touchstart stops the long-press gesture; steering uses pointer events, which still fire.
+  target.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
 
   return {
     intent() {
