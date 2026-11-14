@@ -72,6 +72,17 @@ export function step(g: GameState, intent: SteerIntent, dt: number, rules: Rules
   return null;
 }
 
+/**
+ * Easter egg (Ready Player One's backwards race): the run ended by turning around
+ * and driving off the very start of the road, through the rounded end behind the spawn.
+ */
+export function crashedAtStart(g: GameState): boolean {
+  if (g.phase !== 'over' || g.trackIndex !== 0) return false;
+  const [a, b] = g.track.pts;
+  // behind the first point, looking back along the road
+  return (g.car.x - a.x) * (a.x - b.x) + (g.car.y - a.y) * (a.y - b.y) > 0;
+}
+
 function resolveSteer(g: GameState, intent: SteerIntent): Steer {
   if (intent.kind === 'rate') return { rate: intent.rate };
   // a new gesture anchors to the current heading

@@ -81,6 +81,8 @@ export const SCORE = {
 export const UI = {
   /** After a crash, taps are ignored this long so a held/frantic tap can't skip the score. */
   retryDelayMs: 500,
+  /** The same, after the copper key easter egg, so its animation isn't tapped away. */
+  eggRetryDelayMs: 1500,
   /** A still mouse cursor hides after this long (it also hides on key press or while steering). */
   cursorHideMs: 1500,
   /** Phones get the "add to home screen" card on a menu screen from this many runs on. */

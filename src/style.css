@@ -19,6 +19,13 @@
   --ink-shade: #444; /* bevel inside a pressed/primary (ink) button */
   --highlight: #e4e4e4; /* your own leaderboard row */
   --backdrop: rgba(0, 0, 0, 0.25);
+  /* the copper key (easter egg, ui/egg.ts): the game's only colour */
+  --copper-outline: #4a2610;
+  --copper-hi: #f2b47c;
+  --copper-mid: #c8763c;
+  --copper-lo: #8f4e22;
+  --copper-text: #a85a26;
+  --flash: #fff;
   --pixel: 'Silkscreen', ui-monospace, monospace;
   --sans: -apple-system, system-ui, Helvetica, Arial, sans-serif;
   /* 2px outline drawn with shadows on each side only, so the corners stay notched */
@@ -41,6 +48,12 @@
   --ink-shade: #bdbdbd;
   --highlight: #3a3a3a;
   --backdrop: rgba(0, 0, 0, 0.55);
+  --copper-outline: #0f0f0f;
+  --copper-hi: #e0a26a;
+  --copper-mid: #b5672f;
+  --copper-lo: #7a411b;
+  --copper-text: #e0a26a;
+  --flash: #d8d8d8;
 }
 
 html,
@@ -108,6 +121,175 @@ canvas {
     opacity: 0;
   }
 }
+/* ---- easter egg: copper key above the game-over message (ui/egg.ts) ---- */
+
+#egg {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(50% + 44px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+#egg[hidden] {
+  display: none;
+}
+.egg-flash {
+  position: fixed;
+  inset: 0;
+  background: var(--flash);
+  animation: egg-flash 0.7s ease-out both;
+}
+@keyframes egg-flash {
+  from {
+    opacity: 0.95;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.egg-key {
+  position: relative;
+  width: 144px;
+  animation:
+    egg-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both,
+    egg-spin 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) 0.45s both,
+    egg-bob 1.2s steps(2) 1.4s infinite;
+}
+@media (min-width: 600px) {
+  .egg-key {
+    width: 192px;
+  }
+}
+.egg-key svg {
+  display: block;
+  width: 100%;
+  filter: drop-shadow(3px 3px 0 var(--shadow));
+}
+.egg-key .outline {
+  fill: var(--copper-outline);
+}
+.egg-key .hi {
+  fill: var(--copper-hi);
+}
+.egg-key .mid {
+  fill: var(--copper-mid);
+}
+.egg-key .lo {
+  fill: var(--copper-lo);
+}
+@keyframes egg-pop {
+  from {
+    transform: scale(0) rotate(-30deg);
+  }
+  to {
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes egg-spin {
+  from {
+    rotate: y 0turn;
+  }
+  to {
+    rotate: y 2turn;
+  }
+}
+@keyframes egg-bob {
+  to {
+    translate: 0 -3px;
+  }
+}
+.egg-sparks {
+  position: absolute;
+  left: 50%;
+  top: 40px;
+}
+.egg-sparks i {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px;
+  background: var(--copper-mid);
+  box-shadow: 2px 2px 0 var(--copper-outline);
+  animation: egg-spark 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+.egg-sparks i.ink {
+  background: var(--ink);
+  box-shadow: none;
+}
+@keyframes egg-spark {
+  from {
+    transform: translate(0, 0) scale(1.4);
+  }
+  70% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(var(--dx), var(--dy)) scale(0.5);
+    opacity: 0;
+  }
+}
+#egg b {
+  margin-top: 14px;
+  font: 28px var(--pixel);
+  color: var(--copper-text);
+  text-shadow: 2px 2px 0 var(--copper-outline);
+  white-space: pre;
+}
+#egg b span {
+  display: inline-block;
+  animation: egg-letter 0.35s cubic-bezier(0.3, 1.8, 0.5, 1) both;
+}
+@keyframes egg-letter {
+  from {
+    transform: translateY(-16px) scale(0);
+    opacity: 0;
+  }
+}
+.egg-sub {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+  animation: msg-fade-in 0.4s ease-out 1.1s both;
+}
+canvas.egg-shake {
+  animation: egg-shake 0.45s steps(9) both;
+}
+@keyframes egg-shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: translate(-8px, 4px);
+  }
+  40% {
+    transform: translate(7px, -5px);
+  }
+  60% {
+    transform: translate(-5px, -3px);
+  }
+  80% {
+    transform: translate(3px, 2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .egg-flash,
+  .egg-sparks {
+    display: none;
+  }
+  canvas.egg-shake {
+    animation: none;
+  }
+  .egg-key,
+  #egg b span {
+    animation: msg-fade-in 0.4s ease-out both;
+  }
+}
+
 #msg .rank {
   display: block;
   margin-top: 6px;

@@ -7,9 +7,10 @@ import { startLoop } from './loop';
 import { ALL_LAYERS, createRenderer } from './render/renderer';
 import { api } from './lib/api';
 import { dailySeed, utcDay } from './sim/daily';
-import { createGame, step } from './sim/game';
+import { crashedAtStart, createGame, step } from './sim/game';
 import { autoHideCursor } from './ui/cursor';
 import { createDebug, debugLayers } from './ui/debug';
+import { createEgg } from './ui/egg';
 import { createHud } from './ui/hud';
 import { createInstallPrompt } from './ui/install';
 import { createLeaderboard } from './ui/leaderboard';
@@ -27,6 +28,7 @@ const fixedLayers = debugLayers();
 const layers = fixedLayers ?? new Set(ALL_LAYERS);
 const renderer = createRenderer(canvas, COLORS.light, layers); // palette set by watchTheme below
 const hud = createHud($('#score'), $('#msg'));
+const egg = createEgg($('#egg'), canvas);
 const debug = createDebug();
 autoHideCursor();
 const install = createInstallPrompt($('#install'));
@@ -54,6 +56,7 @@ let ticket: Promise<string | null> = Promise.resolve(null);
 function showReady() {
   paused = false;
   input.clear();
+  egg.hide();
   game = createGame(roadSeed());
   showStart();
   menuCards();
@@ -126,6 +129,7 @@ const input = createInput(canvas, {
     best = loadBest();
     ticket = settings.zen || settings.speed !== 'normal' ? Promise.resolve(null) : api.ticket(game.seed, settings.daily).catch(() => null);
     hud.hideMessage();
+    egg.hide();
     install.runStarted();
     news.hide();
     leaderboard.runStarted();
@@ -137,21 +141,24 @@ const input = createInput(canvas, {
 function tick(dt: number) {
   if (paused) return;
   if (step(game, input.intent(), dt, { crash: !settings.zen, speed: SPEED[settings.speed] }) !== 'crash') return;
-  retryAllowedAt = performance.now() + UI.retryDelayMs;
+  const backwards = crashedAtStart(game);
+  const retryDelay = backwards ? UI.eggRetryDelayMs : UI.retryDelayMs;
+  retryAllowedAt = performance.now() + retryDelay;
   const newBest = game.score > best;
   if (newBest) {
     best = game.score;
     storage.set(bestKey(), String(best));
   }
-  hud.showGameOver(game.score, best, UI.retryDelayMs);
+  hud.showGameOver(game.score, best, retryDelay);
+  if (backwards) egg.show();
   menuCards();
   const ended = game;
   leaderboard.runEnded(ticket, game.score, text => {
     if (game === ended) hud.showRank(text); // still on this run's game-over screen
   });
   if (debug) {
-    debug.event(newBest ? 'crash (new best saved)' : 'crash');
-    setTimeout(() => debug.event('retry hint fades in'), UI.retryDelayMs);
+    debug.event((backwards ? 'crash into the start' : 'crash') + (newBest ? ' (new best saved)' : ''));
+    setTimeout(() => debug.event('retry hint fades in'), retryDelay);
   }
 }
 

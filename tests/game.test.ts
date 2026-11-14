@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, step, type SteerIntent } from '../src/sim/game';
+import { crashedAtStart, createGame, step, type SteerIntent } from '../src/sim/game';
 
 const DT = 1 / 120;
 const ON = { crash: true };
@@ -53,5 +53,23 @@ describe('game', () => {
     off.car.x = 500;
     expect(step(off, { kind: 'rate', rate: 0 }, DT, OFF)).toBeNull();
     expect(off.phase).toBe('run');
+  });
+
+  it('spots a crash into the start of the road (easter egg)', () => {
+    const run = (setup: (g: ReturnType<typeof createGame>) => void) => {
+      const g = createGame(5, 'run');
+      setup(g);
+      for (let i = 0; i < 600 && g.phase === 'run'; i++) step(g, { kind: 'rate', rate: 0 }, DT, ON);
+      expect(g.phase).toBe('over');
+      return crashedAtStart(g);
+    };
+    // turned around: straight back down the road, off its rounded start
+    expect(run(g => Object.assign(g.car, { h: Math.PI / 2, vy: 200 }))).toBe(true);
+    // off the side near the start, or a normal crash further on: no egg
+    expect(run(g => Object.assign(g.car, { h: 0, vx: 200, vy: 0 }))).toBe(false);
+    const g = createGame(5, 'run');
+    g.car.x = 500;
+    step(g, { kind: 'rate', rate: 0 }, DT, ON);
+    expect(crashedAtStart(g)).toBe(false);
   });
 });
