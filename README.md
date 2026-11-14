@@ -3,6 +3,8 @@
 A minimal top-down drift game for desktop and mobile. Stay on the road; the
 car speeds up the longer you survive. Zen mode turns off crashes and scoring.
 
+**Play it:** [monodrift.galacticquasar.dev](https://monodrift.galacticquasar.dev)
+
 ## Controls
 
 - **Desktop:** ← → to steer (or hold the left/right half of the screen); any
@@ -20,7 +22,8 @@ npm run build      # typecheck + production build into dist/
 npm run preview    # serve the production build locally
 ```
 
-`dist/` is a static site: deploy it to any static host.
+`dist/` is a static site. It's deployed to Cloudflare Workers (static assets,
+see `wrangler.jsonc`), which builds and publishes every push to `main`.
 
 ## Debugging performance
 
