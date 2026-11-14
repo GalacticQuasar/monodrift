@@ -59,6 +59,8 @@ Add `&render=…` to switch drawing layers off and isolate a problem:
 ## Layout
 
 ```
+index.html         the game page
+updates.html       /updates: patch notes, filled in from docs/patch-notes.md at build time
 src/
   main.ts          wiring: creates everything and starts the loop
   config.ts        every tuning constant

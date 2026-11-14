@@ -189,7 +189,7 @@ export function createSettings(
     { className: 'box', role: 'dialog', ariaModal: 'true', ariaLabel: 'Settings' },
     el('div', { className: 'head' }, el('b', { textContent: 'Settings' }), closeBtn),
     el('div', { className: 'rows' }, ...rows),
-    el('p', { className: 'note', textContent: 'Changing Road or Zen starts over.' }),
+    el('div', { className: 'foot' }, el('p', { className: 'note', textContent: 'Changing Road or Zen starts over.' }), el('a', { href: '/updates', textContent: "What's new" })),
   );
   panel.replaceChildren(box);
   refresh();

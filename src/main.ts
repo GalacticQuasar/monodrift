@@ -13,6 +13,7 @@ import { createDebug, debugLayers } from './ui/debug';
 import { createHud } from './ui/hud';
 import { createInstallPrompt } from './ui/install';
 import { createLeaderboard } from './ui/leaderboard';
+import { createNews } from './ui/news';
 import { createSettings, sensitivityFactor } from './ui/settings';
 import { watchTheme } from './ui/theme';
 
@@ -29,11 +30,15 @@ const hud = createHud($('#score'), $('#msg'));
 const debug = createDebug();
 autoHideCursor();
 const install = createInstallPrompt($('#install'));
+const news = createNews($('#news'), __LATEST_NOTES__);
 const leaderboard = createLeaderboard({
   button: $('#lb'),
   panel: $('#board'),
   card: $('#join'),
-  onCardShown: () => install.hide(),
+  onCardShown: () => {
+    install.hide();
+    news.hide();
+  },
 });
 
 let best = Number(storage.get(KEYS.best)) || 0;
@@ -49,7 +54,12 @@ function showReady() {
   input.clear();
   game = createGame(roadSeed());
   hud.showStart(settings.mode, settings.zen, settings.daily);
-  install.maybeShow();
+  menuCards();
+}
+
+/** Cards in the bottom spot on a menu screen: "updated" first, else "add to home screen". */
+function menuCards() {
+  if (!news.maybeShow()) install.maybeShow();
 }
 
 const settings = createSettings($('#settings-btn'), $('#settings'), changed => {
@@ -111,6 +121,7 @@ const input = createInput(canvas, {
     ticket = settings.zen ? Promise.resolve(null) : api.ticket(game.seed, settings.daily).catch(() => null);
     hud.hideMessage();
     install.runStarted();
+    news.hide();
     leaderboard.runStarted();
     debug?.event('start');
     return true;
@@ -127,7 +138,7 @@ function tick(dt: number) {
     storage.set(KEYS.best, String(best));
   }
   hud.showGameOver(game.score, best, UI.retryDelayMs);
-  install.maybeShow();
+  menuCards();
   const ended = game;
   leaderboard.runEnded(ticket, game.score, text => {
     if (game === ended) hud.showRank(text); // still on this run's game-over screen
@@ -166,8 +177,9 @@ startLoop({
 });
 
 hud.showStart(settings.mode, settings.zen, settings.daily);
+menuCards();
 // beforeinstallprompt usually arrives shortly after load, so check again then
-addEventListener('load', () => setTimeout(() => game.phase === 'ready' && install.maybeShow(), 1000));
+addEventListener('load', () => setTimeout(() => game.phase === 'ready' && menuCards(), 1000));
 
 // offline support (see src/sw.js); production only, the dev server's files change constantly
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

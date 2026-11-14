@@ -56,6 +56,8 @@ async function page(req) {
   } catch {
     // offline or too slow: fall through to the saved copy
   }
-  const saved = await caches.match('/', { cacheName: CACHE, ignoreVary: true });
+  // the saved copy of this page (e.g. /updates), else the game
+  const path = new URL(req.url).pathname;
+  const saved = (await caches.match(path, { cacheName: CACHE, ignoreVary: true })) || (await caches.match('/', { cacheName: CACHE, ignoreVary: true }));
   return saved || res || Response.error();
 }

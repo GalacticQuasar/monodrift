@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>What's new in Monodrift</title>
+    <meta name="description" content="Updates to Monodrift, a minimal top-down drift game, newest first." />
+    <meta name="theme-color" content="#e8e8e8" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://monodrift.galacticquasar.dev/updates" />
+    <meta property="og:title" content="What's new in Monodrift" />
+    <meta property="og:description" content="Updates to Monodrift, a minimal top-down drift game, newest first." />
+    <meta property="og:image" content="https://monodrift.galacticquasar.dev/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // light/dark before first paint (same rule as the game: src/ui/theme.ts)
+      (function () {
+        var d = null;
+        try {
+          d = localStorage.getItem('monodrift-dark');
+        } catch (e) {}
+        var dark = d === 'on' || (d === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) {
+          document.documentElement.dataset.theme = 'dark';
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#1b1b1b');
+        }
+        // reading the notes counts as seeing them: no "updated" card in the game after this
+        try {
+          localStorage.setItem('monodrift-notes-seen', '__LATEST_NOTES_ID__');
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="/src/updates.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>What's new</h1>
+        <p class="lead">Updates to Monodrift, a minimal top-down drift game. Newest first.</p>
+        <a class="play" href="/">Play Monodrift</a>
+      </header>
+      <!-- filled in from docs/patch-notes.md by vite.config.ts -->
+      <!--PATCH_NOTES-->
+    </main>
+  </body>
+</html>

@@ -20,6 +20,8 @@ export const KEYS = {
   trees: 'monodrift-trees',
   /** Dark mode: 'off' (also when unset), 'on' or 'auto' (follow the device). Read before load in index.html. */
   dark: 'monodrift-dark',
+  /** Id of the newest patch notes the player has seen (card shown, or /updates opened). Also set in updates.html. */
+  notesSeen: 'monodrift-notes-seen',
 } as const;
 
 export const storage = {

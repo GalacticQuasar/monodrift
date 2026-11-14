@@ -227,7 +227,8 @@ button:disabled {
   margin: 6px 0 12px;
   color: var(--text2);
 }
-#install div {
+#install div,
+.card .buttons {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -338,6 +339,19 @@ button:disabled {
   #settings .meter i {
     width: 6px;
   }
+}
+
+#settings .foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+#settings .foot a {
+  margin: 8px 0 4px;
+  font: 14px var(--pixel);
+  color: var(--ink);
 }
 
 /* ---- name form (name card and board panel) ---- */

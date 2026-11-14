@@ -70,8 +70,11 @@ no framework, canvas 2D. See `README.md` for the file layout.
 ## Patch notes
 
 For player-facing update notes ("what's new" to share with friends), use the
-`patch-notes` skill (`.claude/skills/patch-notes/`): same page template every time,
-and a log in `docs/patch-notes.md` that marks where the next notes start.
+`patch-notes` skill (`.claude/skills/patch-notes/`). The log `docs/patch-notes.md` is
+the source of the `/updates` page (`updates.html`, filled in at build time by
+`vite.config.ts` via `lib/patch-notes.ts`) and of the one-time "Monodrift was updated"
+card for returning players (`ui/news.ts`, newest entry id vs `monodrift-notes-seen`).
+Keep its entry format; pushing a new entry publishes it.
 
 ## Performance rules
 

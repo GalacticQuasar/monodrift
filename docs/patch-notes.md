@@ -2,6 +2,31 @@
 
 Player-facing update notes, newest first. Made with the `patch-notes` skill
 (`.claude/skills/patch-notes/`); the next notes start after the `last commit` below.
+This file is the source of https://monodrift.galacticquasar.dev/updates and the
+in-game "updated" card: keep the entry format the skill describes.
+
+## 2026-11-14
+
+- Covers: `83924b4` to `2c0f0e7` (Settings, retro look, phone icons, dark mode, pause)
+- Last commit: `2c0f0e7`
+- Page: https://claude.ai/artifact/RpNz5hxRAKuqe4NHbjTjQh
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Settings**: one Settings button now holds all the options. Road (Daily or Random), Zen mode and Slide mode from last time have moved in there. Slide mode is now under Steering
+- **Dark mode**: a night road with a white car. Turn it on in Settings, or pick Auto to match your phone or computer
+
+**Controls and feel**
+- **Steering sensitivity**: five levels in Settings, for the arrow keys, holding the sides, and Slide
+- **Pause**: opening Settings during a run pauses it. Close it and tap or press a key to keep driving
+
+**Polish**
+- **Retro look**: buttons, menus and the score use a pixel font and chunky pixel borders to match the trees
+- **Icon buttons on phones**: a trophy for the leaderboard and a gear for Settings, so the score has room
+- **Trees on or off**: hide the trees in Settings for a cleaner view
+- **Name box fixed**: on small phones, the leaderboard name box is no longer squeezed
 
 ## 2026-11-13
 
