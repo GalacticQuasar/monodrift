@@ -4,6 +4,10 @@ export const KEYS = {
   best: 'monodrift-best',
   mode: 'monodrift-mode',
   zen: 'monodrift-zen',
+  /** Runs started, ever (for the install card). */
+  runs: 'monodrift-runs',
+  /** 'done' once the install card was used or dismissed. */
+  install: 'monodrift-install',
 } as const;
 
 export const storage = {

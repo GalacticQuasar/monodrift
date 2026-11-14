@@ -8,6 +8,7 @@ import { createGame, step } from './sim/game';
 import { autoHideCursor } from './ui/cursor';
 import { createDebug, debugLayers } from './ui/debug';
 import { createHud } from './ui/hud';
+import { createInstallPrompt } from './ui/install';
 import { createSettings } from './ui/settings';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -19,6 +20,7 @@ const renderer = createRenderer(canvas, debugLayers());
 const hud = createHud($('#score'), $('#msg'));
 const debug = createDebug();
 autoHideCursor();
+const install = createInstallPrompt($('#install'));
 
 let best = Number(storage.get(KEYS.best)) || 0;
 let game = createGame(randomSeed());
@@ -29,6 +31,7 @@ function showReady() {
   input.clear();
   game = createGame(randomSeed());
   hud.showStart(settings.mode, settings.zen);
+  install.maybeShow();
 }
 
 const settings = createSettings($('#mode'), $('#zen'), changed => {
@@ -50,6 +53,7 @@ const input = createInput(canvas, {
     // from the start screen, drive the road already on screen; a retry gets a new one
     game = createGame(game.phase === 'ready' ? game.seed : randomSeed(), 'run');
     hud.hideMessage();
+    install.runStarted();
     debug?.event('start');
     return true;
   },
@@ -64,6 +68,7 @@ function tick(dt: number) {
     storage.set(KEYS.best, String(best));
   }
   hud.showGameOver(game.score, best, UI.retryDelayMs);
+  install.maybeShow();
   if (debug) {
     debug.event(newBest ? 'crash (new best saved)' : 'crash');
     setTimeout(() => debug.event('retry hint fades in'), UI.retryDelayMs);
@@ -98,6 +103,8 @@ startLoop({
 });
 
 hud.showStart(settings.mode, settings.zen);
+// beforeinstallprompt usually arrives shortly after load, so check again then
+addEventListener('load', () => setTimeout(() => game.phase === 'ready' && install.maybeShow(), 1000));
 
 // offline support (see src/sw.js); production only, the dev server's files change constantly
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
