@@ -3,7 +3,6 @@ Fixes:
 - Fix jitters - but only seem to be present on windows laptops, mac laptop runs really smoothly
 
 Features:
-- Ready player one easter egg when a player crashes into the start
 - Keybinds changing
 - Color themes
 - Maps (like City mode, etc.)
@@ -11,9 +10,7 @@ Features:
 - Curbs around outer edge of turns- if you drift on them you get a speed boost (which helps accel into the next straight)
   - Could be styled white&grey alternating
 - Curbs in general? Serves as visual indicator you are going out of bounds, only if you go past it you end run
-
-Art:
-- Make cottages / campfires
+- Art: Make cottages / campfires
 
 Autonomous Bots:
 - RL train
