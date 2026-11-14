@@ -39,10 +39,13 @@ const leaderboard = createLeaderboard({
 let best = Number(storage.get(KEYS.best)) || 0;
 /** performance.now() before which a tap won't start a new run. */
 let retryAllowedAt = 0;
+/** Run frozen because Settings was opened mid-run; the next tap/key after it closes resumes. */
+let paused = false;
 /** Leaderboard ticket for the current run (null: zen, or offline when it started). */
 let ticket: Promise<string | null> = Promise.resolve(null);
 
 function showReady() {
+  paused = false;
   input.clear();
   game = createGame(roadSeed());
   hud.showStart(settings.mode, settings.zen, settings.daily);
@@ -61,6 +64,14 @@ const settings = createSettings($('#settings-btn'), $('#settings'), changed => {
     applyTrees();
   } else if (changed === 'dark') {
     updateTheme();
+  }
+}, open => {
+  if (open && game.phase === 'run') {
+    paused = true;
+    input.clear();
+    debug?.event('pause');
+  } else if (!open && paused) {
+    hud.showPaused(); // resuming the moment the panel closes would crash the car before you're ready
   }
 });
 
@@ -85,7 +96,14 @@ const input = createInput(canvas, {
   sensitivity: () => sensitivityFactor(settings.sensitivity),
   pointerSteer: !DESKTOP,
   onAction: () => {
-    if (game.phase === 'run' || leaderboard.open || settings.open) return false;
+    if (leaderboard.open || settings.open) return false;
+    if (paused) {
+      paused = false;
+      hud.hideMessage();
+      debug?.event('resume');
+      return true;
+    }
+    if (game.phase === 'run') return false;
     if (performance.now() < retryAllowedAt) return true; // swallow the tap
     // from the start screen, drive the road already on screen; a retry gets a new one
     game = createGame(game.phase === 'ready' ? game.seed : roadSeed(), 'run');
@@ -100,6 +118,7 @@ const input = createInput(canvas, {
 });
 
 function tick(dt: number) {
+  if (paused) return;
   if (step(game, input.intent(), dt, { crash: !settings.zen }) !== 'crash') return;
   retryAllowedAt = performance.now() + UI.retryDelayMs;
   const newBest = game.score > best;
@@ -134,7 +153,7 @@ startLoop({
   },
   render(alpha, now) {
     const t0 = debug ? performance.now() : 0;
-    renderer.draw(game, alpha);
+    renderer.draw(game, paused ? 1 : alpha); // paused: no stepping, so draw the last state exactly
     hud.setScore(game.phase === 'ready' || settings.zen ? '' : String(game.score));
     if (!debug) return;
     counters.drawMs = performance.now() - t0;

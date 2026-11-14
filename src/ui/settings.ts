@@ -44,7 +44,13 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
   return e;
 }
 
-export function createSettings(button: HTMLButtonElement, panel: HTMLElement, onChange: (setting: keyof Settings) => void): SettingsPanel {
+export function createSettings(
+  button: HTMLButtonElement,
+  panel: HTMLElement,
+  onChange: (setting: keyof Settings) => void,
+  /** The panel opened (true) or closed (false). */
+  onOpenChange: (open: boolean) => void,
+): SettingsPanel {
   const state = {
     mode: (storage.get(KEYS.mode) === 'drag' ? 'drag' : 'sides') as SteerMode,
     zen: storage.get(KEYS.zen) === 'on',
@@ -194,6 +200,7 @@ export function createSettings(button: HTMLButtonElement, panel: HTMLElement, on
     panel.hidden = true;
     button.focus({ preventScroll: true });
     button.blur();
+    onOpenChange(false);
   }
 
   button.addEventListener('click', () => {
@@ -201,6 +208,7 @@ export function createSettings(button: HTMLButtonElement, panel: HTMLElement, on
     isOpen = true;
     panel.hidden = false;
     closeBtn.focus({ preventScroll: true });
+    onOpenChange(true);
   });
   panel.addEventListener('pointerdown', e => {
     if (e.target === panel) close(); // tap outside the box

@@ -365,6 +365,17 @@ button:disabled {
 .name-form input:focus {
   box-shadow: var(--frame), inset 2px 2px var(--shade), 0 0 0 4px var(--line);
 }
+/* name card on a narrow phone: the input gets its own line, buttons under it */
+@media (max-width: 380px) {
+  #join .name-form .row {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  #join .name-form input {
+    box-sizing: border-box;
+    flex: 1 0 calc(100% - 4px); /* minus its 2px frame margins */
+  }
+}
 .name-form .error {
   margin: 6px 0 0;
   min-height: 1em;

@@ -12,6 +12,8 @@ export interface Hud {
   showStart(mode: SteerMode, zen: boolean, daily: boolean): void;
   /** `hintDelayMs`: the "tap/press any key to retry" line fades in after this long. */
   showGameOver(score: number, best: number, hintDelayMs: number): void;
+  /** The run is paused (Settings was opened mid-run). */
+  showPaused(): void;
   /** Adds the leaderboard line (e.g. "#3 today · #12 all-time") under a game-over message. */
   showRank(text: string): void;
   hideMessage(): void;
@@ -51,6 +53,9 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
     },
     showGameOver(score, best, hintDelayMs) {
       message(String(score), [`best ${best} · ${PRESS} to retry`], hintDelayMs);
+    },
+    showPaused() {
+      message('Paused', [`${PRESS} to resume`]);
     },
     showRank(text) {
       const line = document.createElement('span');
