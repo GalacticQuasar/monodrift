@@ -73,6 +73,8 @@ export const SCORE = {
 export const UI = {
   /** After a crash, taps are ignored this long so a held/frantic tap can't skip the score. */
   retryDelayMs: 500,
+  /** A still mouse cursor hides after this long (it also hides on key press or while steering). */
+  cursorHideMs: 1500,
 } as const;
 
 export const INPUT = {

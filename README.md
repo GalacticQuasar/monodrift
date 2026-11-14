@@ -58,7 +58,7 @@ src/
     camera.ts      follows the car
     scenery.ts     seeded tree placement on a world grid, kept off the road
     sprites.ts     pixel-art tree sprites + the device-scaled atlas
-  ui/              DOM: HUD, settings buttons, ?debug panel
+  ui/              DOM: HUD, settings buttons, cursor auto-hide, ?debug panel
   lib/             small helpers (guarded localStorage)
 tests/             Vitest tests for sim/ and scenery
 docs/

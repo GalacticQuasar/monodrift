@@ -11,6 +11,11 @@ body {
   -webkit-touch-callout: none;
 }
 
+.cursor-hidden,
+.cursor-hidden * {
+  cursor: none !important;
+}
+
 canvas {
   display: block;
   width: 100%;
