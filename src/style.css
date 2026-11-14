@@ -143,6 +143,30 @@ button:disabled {
 #settings-btn {
   right: 14px;
 }
+#lb .icon,
+#settings-btn .icon {
+  display: none;
+  width: 24px; /* 24x24 icon grid, 1:1 */
+  height: 24px;
+  fill: currentColor;
+  shape-rendering: crispEdges;
+}
+/* touch devices (not lib/device.ts DESKTOP): icons only, so the score has room */
+@media not ((hover: hover) and (pointer: fine)) {
+  #lb,
+  #settings-btn {
+    padding: 8px;
+    line-height: 0;
+  }
+  #lb .icon,
+  #settings-btn .icon {
+    display: block;
+  }
+  #lb .label,
+  #settings-btn .label {
+    display: none;
+  }
+}
 
 /* ---- panels: cards (bottom) and modals ---- */
 
