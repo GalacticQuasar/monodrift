@@ -1,10 +1,10 @@
 Fixes:
+- Track: make straights more straight and less wiggly, maybe add tighter curves or more types of curves
 - Fix jitters - but only seem to be present on windows laptops, mac laptop runs really smoothly
 
 Features:
-- Dark Mode
-- Settings modal to change sensitivity, maybe turn on/off trees, etc.
-  - adjust speed?
+- Ready player one easter egg when a player crashes into the start
+- Keybinds changing
 - Color themes
 - Maps (like City mode, etc.)
 - Track Mode (set track for a day, whoever gets lowest time to finish wins)

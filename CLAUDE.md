@@ -52,9 +52,12 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - The daily road seed comes from the UTC date (`sim/daily.ts`). Starting a run from
   the start screen keeps the road already on screen; retries get a new one.
 - Settings and identity live in localStorage under `monodrift-*` (`lib/storage.ts`).
-- Two top buttons only: Leaderboard and Settings (icons on phones). Road, Zen,
-  Steering, Sensitivity, Trees and Dark live in the Settings panel (`ui/settings.ts`); changing Road or Zen
-  starts over. Opening Settings mid-run pauses the run; after closing it, the next
+- Two top buttons only: Leaderboard and Settings (icons on phones). Road, Zen, Speed,
+  Steering, Sensitivity, Trees and Dark live in the Settings panel (`ui/settings.ts`); changing Road, Zen
+  or Speed starts over.
+- Speed (Slow/Normal/Fast, `SPEED` in `config.ts`) scales game time via the sim's
+  `speed` rule. Only Normal runs are ranked (no ticket otherwise; a note under the
+  picker says so), and each speed keeps its own local best. Opening Settings mid-run pauses the run; after closing it, the next
   tap/key resumes. Sensitivity scales steering in `input/`, never in the sim.
 - Dark mode: the Dark setting (Off by default / On / Auto follows the device) sets
   `data-theme` on `<html>` (`ui/theme.ts`; an inline script in `index.html` does it
