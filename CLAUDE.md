@@ -57,6 +57,12 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - `todo.md` is the user's own list (in the repo): edit it only when asked, and let
   the user tick items off.
 
+## Patch notes
+
+For player-facing update notes ("what's new" to share with friends), use the
+`patch-notes` skill (`.claude/skills/patch-notes/`): same page template every time,
+and a log in `docs/patch-notes.md` that marks where the next notes start.
+
 ## Performance rules
 
 - **No per-frame garbage** in the loop: reuse arrays/objects, pass whole numbers
