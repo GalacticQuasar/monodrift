@@ -1,4 +1,4 @@
-# Drift
+# Monodrift
 
 Minimal top-down drift game for desktop and mobile browsers. Vite + TypeScript,
 no framework, canvas 2D. See `README.md` for the file layout.

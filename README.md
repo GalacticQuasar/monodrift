@@ -1,4 +1,4 @@
-# Drift
+# Monodrift
 
 A minimal top-down drift game for desktop and mobile. Stay on the road; the
 car speeds up the longer you survive. Zen mode turns off crashes and scoring.

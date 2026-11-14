@@ -270,7 +270,7 @@ export function createDebug(): Debug | null {
       });
 
     return [
-      '=== drift debug report ===',
+      '=== monodrift debug report ===',
       `when: ${new Date().toISOString()}`,
       `ua: ${navigator.userAgent}`,
       `view: ${innerWidth}x${innerHeight} css @ ${devicePixelRatio}x (screen ${screen.width}x${screen.height})`,

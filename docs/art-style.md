@@ -1,7 +1,7 @@
 # Art style guide
 
 How visual assets (trees today; houses, rocks, signs, … later) are designed and
-wired into Drift. Read this before adding or changing any sprite.
+wired into Monodrift. Read this before adding or changing any sprite.
 
 ## The look
 

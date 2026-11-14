@@ -43,7 +43,7 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
     },
     showStart(mode, zen) {
       message(
-        zen ? 'Drift · Zen' : 'Drift',
+        zen ? 'Monodrift · Zen' : 'Monodrift',
         zen
           ? [HELP[mode], 'no crashes, no score · just drive', `${PRESS} to start`]
           : [`${HELP[mode]} · stay on the road`, `${PRESS} to start`],

@@ -1,9 +1,9 @@
 // localStorage can throw (private mode, blocked storage), so every access is guarded.
 
 export const KEYS = {
-  best: 'drift-best',
-  mode: 'drift-mode',
-  zen: 'drift-zen',
+  best: 'monodrift-best',
+  mode: 'monodrift-mode',
+  zen: 'monodrift-zen',
 } as const;
 
 export const storage = {
