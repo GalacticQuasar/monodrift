@@ -18,6 +18,9 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - `src/input/` turns events into a `SteerIntent`; `src/ui/` is DOM (HUD,
   settings, debug panel). `src/main.ts` wires them together.
 - All tuning numbers live in `src/config.ts`.
+- Offline: `src/sw.js` is a service worker template; the plugin in
+  `vite.config.ts` fills in the file list and version at build time. It only runs
+  in production builds (test offline with `npm run build && npm run preview`).
 
 ## Performance rules
 

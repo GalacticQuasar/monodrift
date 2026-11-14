@@ -98,3 +98,8 @@ startLoop({
 });
 
 hud.showStart(settings.mode, settings.zen);
+
+// offline support (see src/sw.js); production only, the dev server's files change constantly
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}

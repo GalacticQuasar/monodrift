@@ -5,7 +5,8 @@
 A minimal top-down drift game for desktop and mobile. Stay on the road; the
 car speeds up the longer you survive. Zen mode turns off crashes and scoring.
 
-**Play it:** [monodrift.galacticquasar.dev](https://monodrift.galacticquasar.dev)
+**Play it:** [monodrift.galacticquasar.dev](https://monodrift.galacticquasar.dev). After the first
+visit it also works offline, and it can be added to a phone's home screen.
 
 ## Controls
 
@@ -45,6 +46,7 @@ src/
   main.ts          wiring: creates everything and starts the loop
   config.ts        every tuning constant
   loop.ts          fixed-timestep loop (120 Hz sim, interpolated rendering)
+  sw.js            offline service worker template (filled in by vite.config.ts)
   sim/             the game itself: pure, deterministic, no DOM
     game.ts        GameState, phases, step(state, intent, dt, rules)
     track.ts       seeded road generation + nearest-point lookup
