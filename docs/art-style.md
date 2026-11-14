@@ -30,6 +30,9 @@ These were all tried for the trees and rejected:
 - **Outlines/dark crevices between overlapping parts** (e.g. each canopy lobe
   outlined): read as cabbages or roses. Outline the silhouette only.
 - **Pure top-down canopy** (round blob, no trunk): read as pebbles/rocks.
+- **Tight clumps** (up to 6 trees within ~34 px, canopies stacked on each
+  other): each clump merged into one lumpy blob. Groups are now looser and trees
+  in a cell keep their canopies apart (`SCENERY.treeSpacing`).
 - **Soft colour (sage greens) with smooth vector circles**: didn't fit; the
   game wants grayscale pixel art.
 

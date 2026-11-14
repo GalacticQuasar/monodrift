@@ -95,9 +95,16 @@ export const SCENERY = {
   /** Trees are generated per square world cell of this size (px). */
   cellSize: 160,
   maxClumpsPerCell: 2,
-  maxClumpSize: 6,
+  maxClumpSize: 5,
   /** Max distance (px) of a tree from its clump's centre. */
-  clumpSpread: 34,
+  clumpSpread: 70,
+  /**
+   * Trees in a cell keep their canopies at least this many canopy radii apart
+   * (1 = just touching), so groups read as separate trees rather than one blob.
+   */
+  treeSpacing: 1.15,
+  /** Spots tried for a tree before it's dropped for being too close to others. */
+  placementTries: 4,
   /** Size of forest/clearing patches, in cells. */
   patchCells: 4,
   /** Density below this is a clearing. */

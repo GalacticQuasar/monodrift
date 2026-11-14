@@ -67,6 +67,19 @@ function clearOfRoad(track: Track, from: number, x: number, y: number, r: number
   return true;
 }
 
+/** Canopy radius (world px) of a tree with this sprite index. */
+const canopy = (sprite: number) => SIZES[Math.floor(sprite / SCENERY.variantsPerSize)] * SCENERY.pixelScale;
+
+/** True if a tree of size `sizeIdx` at (x, y) keeps its distance from the trees already placed. */
+function spacedOut(trees: readonly Tree[], x: number, y: number, sizeIdx: number): boolean {
+  const own = SIZES[sizeIdx] * SCENERY.pixelScale;
+  for (const t of trees) {
+    const min = (own + canopy(t.sprite)) * SCENERY.treeSpacing;
+    if ((t.x - x) ** 2 + (t.y - y) ** 2 < min * min) return false;
+  }
+  return true;
+}
+
 function generateCell(g: GameState, cx: number, cy: number): Tree[] {
   const d = (density(g.seed, cx, cy) - SCENERY.clearing) / (1 - SCENERY.clearing);
   if (d <= 0) return [];
@@ -78,15 +91,21 @@ function generateCell(g: GameState, cx: number, cy: number): Tree[] {
   for (let c = 0; c < clumps; c++) {
     const gx = (cx + rng()) * CELL, gy = (cy + rng()) * CELL;
     const size = 1 + Math.floor(rng() * SCENERY.maxClumpSize * d);
+    const spread = SCENERY.clumpSpread * Math.sqrt(size / SCENERY.maxClumpSize);
     for (let k = 0; k < size; k++) {
-      const a = rng() * Math.PI * 2, dist = rng() * SCENERY.clumpSpread * Math.sqrt(size / SCENERY.maxClumpSize);
-      const x = gx + Math.cos(a) * dist, y = gy + Math.sin(a) * dist;
       // denser patches grow bigger trees
       const sizeIdx = Math.min(SIZES.length - 1, Math.floor(rng() * SIZES.length * (0.5 + d / 2)));
       const sprite = sizeIdx * SCENERY.variantsPerSize + Math.floor(rng() * SCENERY.variantsPerSize);
       // clearance covers canopy, trunk and ground shadow below it
       const r = treeReach(SIZES[sizeIdx]) * SCENERY.pixelScale;
-      if (clearOfRoad(g.track, from, x, y, r)) trees.push({ x, y, r, sprite });
+      for (let t = 0; t < SCENERY.placementTries; t++) {
+        const a = rng() * Math.PI * 2, dist = Math.sqrt(rng()) * spread; // uniform over the disc
+        const x = gx + Math.cos(a) * dist, y = gy + Math.sin(a) * dist;
+        if (spacedOut(trees, x, y, sizeIdx)) {
+          if (clearOfRoad(g.track, from, x, y, r)) trees.push({ x, y, r, sprite });
+          break;
+        }
+      }
     }
   }
   return trees.sort((a, b) => a.y - b.y); // once per cell, so visible() is nearly sorted
