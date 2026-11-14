@@ -29,6 +29,8 @@ export interface Scenery {
    * The returned array is reused: valid until the next call.
    */
   visible(g: GameState, left: number, top: number, right: number, bottom: number): Tree[];
+  /** Running totals, for debugging. */
+  readonly stats: { cellsGenerated: number; cellsEvicted: number };
 }
 
 const CELL = SCENERY.cellSize;
@@ -84,15 +86,17 @@ function generateCell(g: GameState, cx: number, cy: number): Tree[] {
       if (clearOfRoad(g.track, from, x, y, r)) trees.push({ x, y, r, sprite });
     }
   }
-  return trees;
+  return trees.sort((a, b) => a.y - b.y); // once per cell, so visible() is nearly sorted
 }
 
 export function createScenery(): Scenery {
   let owner: GameState | null = null;
   const cells = new Map<number, Cell>();
   const out: Tree[] = []; // reused every frame to avoid garbage
+  const stats = { cellsGenerated: 0, cellsEvicted: 0 };
 
   return {
+    stats,
     visible(g, left, top, right, bottom) {
       if (g !== owner) {
         owner = g; // new run: new forest
@@ -108,21 +112,42 @@ export function createScenery(): Scenery {
       if (cells.size > SCENERY.maxCachedCells) {
         const margin = 4;
         for (const [key, c] of cells) {
-          if (c.cx < x0 - margin || c.cx > x1 + margin || c.cy < y0 - margin || c.cy > y1 + margin) cells.delete(key);
+          if (c.cx < x0 - margin || c.cx > x1 + margin || c.cy < y0 - margin || c.cy > y1 + margin) {
+            cells.delete(key);
+            stats.cellsEvicted++;
+          }
         }
       }
 
-      out.length = 0;
+      // fill by index, then trim: `out.length = 0` would make V8 drop the backing
+      // store and reallocate it every frame (~4 KB/frame of garbage)
+      let n = 0;
       for (let cy = y0; cy <= y1; cy++) {
         for (let cx = x0; cx <= x1; cx++) {
           const key = cx * 1048576 + cy; // unique while |cy| < 2^19 cells (~84M px)
           let cell = cells.get(key);
-          if (!cell) cells.set(key, (cell = { cx, cy, trees: generateCell(g, cx, cy) }));
-          for (const t of cell.trees) out.push(t);
+          if (!cell) {
+            cells.set(key, (cell = { cx, cy, trees: generateCell(g, cx, cy) }));
+            stats.cellsGenerated++;
+          }
+          const trees = cell.trees;
+          for (let i = 0; i < trees.length; i++) out[n++] = trees[i];
         }
       }
-      // 3/4-view sprites: draw back to front so lower trees overlap higher ones
-      return out.sort((a, b) => a.y - b.y);
+      out.length = n;
+      // 3/4-view sprites: draw back to front so lower trees overlap higher ones.
+      // Cells come row by row with their trees pre-sorted, so `out` is nearly sorted:
+      // an in-place insertion sort is close to linear and allocates nothing.
+      for (let i = 1; i < out.length; i++) {
+        const t = out[i];
+        let j = i - 1;
+        while (j >= 0 && out[j].y > t.y) {
+          out[j + 1] = out[j];
+          j--;
+        }
+        out[j + 1] = t;
+      }
+      return out;
     },
   };
 }

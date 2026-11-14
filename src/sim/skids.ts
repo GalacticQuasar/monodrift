@@ -2,9 +2,11 @@ import { SKIDS } from '../config';
 import type { Car } from './car';
 
 export interface SkidMark {
+  /** Whole world pixels: integers draw without per-call number boxing (no garbage). */
   x: number;
   y: number;
-  alpha: number;
+  /** Darkness, 1..SKIDS.levels (quantised so the renderer can batch by level). */
+  level: number;
 }
 
 export interface Skids {
@@ -29,12 +31,12 @@ export function emitSkids(skids: Skids, car: Car, slip: number): void {
 
   const c = Math.cos(car.h), s = Math.sin(car.h);
   const alpha = Math.min(SKIDS.maxAlpha, slip * SKIDS.alphaPerSlip);
-  for (const side of [-1, 1]) {
-    skids.marks.push({
-      x: car.x - c * SKIDS.wheelBack - s * side * SKIDS.wheelSide,
-      y: car.y - s * SKIDS.wheelBack + c * side * SKIDS.wheelSide,
-      alpha,
-    });
-  }
+  const level = Math.max(1, Math.round((alpha / SKIDS.maxAlpha) * SKIDS.levels));
+  const bx = car.x - c * SKIDS.wheelBack, by = car.y - s * SKIDS.wheelBack;
+  const ox = s * SKIDS.wheelSide, oy = c * SKIDS.wheelSide;
+  skids.marks.push(
+    { x: Math.round(bx + ox), y: Math.round(by - oy), level },
+    { x: Math.round(bx - ox), y: Math.round(by + oy), level },
+  );
   if (skids.marks.length > SKIDS.max) skids.marks.splice(0, SKIDS.trim);
 }

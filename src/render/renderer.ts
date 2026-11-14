@@ -1,19 +1,28 @@
 // Draws a GameState. Read-only: never modifies the state.
 
-import { CAR, COLORS, SCENERY, TRACK, VIEW } from '../config';
+import { CAR, COLORS, SCENERY, SKIDS, TRACK, VIEW } from '../config';
 import type { GameState } from '../sim/game';
 import { followCar } from './camera';
 import { createScenery, type Tree } from './scenery';
 import { buildAtlas, buildTreeSprites, type Atlas } from './sprites';
 
+/** Drawing layers; debug mode can switch them off to isolate rendering problems. */
+export type Layer = 'bg' | 'road' | 'skids' | 'car' | 'trees';
+export const ALL_LAYERS: readonly Layer[] = ['bg', 'road', 'skids', 'car', 'trees'];
+
 export interface Renderer {
   /** `alpha` (0..1) blends between the previous and current sim step. */
   draw(g: GameState, alpha: number): void;
+  /** For debugging (updated in place each frame): trees drawn, scenery running totals. */
+  readonly stats: { trees: number; cellsGenerated: number; cellsEvicted: number };
 }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-export function createRenderer(canvas: HTMLCanvasElement): Renderer {
+/** Skid opacity per darkness level (index 0 unused). */
+const ALPHAS = Array.from({ length: SKIDS.levels + 1 }, (_, i) => (i / SKIDS.levels) * SKIDS.maxAlpha);
+
+export function createRenderer(canvas: HTMLCanvasElement, layers: ReadonlySet<Layer> = new Set(ALL_LAYERS)): Renderer {
   // opaque: we paint every pixel each frame, so the browser needn't blend with the page
   const ctx = canvas.getContext('2d', { alpha: false })!;
   const scenery = createScenery();
@@ -34,74 +43,98 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
   addEventListener('resize', resize);
   resize();
 
+  const stats = { trees: 0, cellsGenerated: 0, cellsEvicted: 0 };
+
   return {
+    stats,
     draw(g, alpha) {
-      const { car, track } = g;
+      const { car } = g;
       const cx = lerp(car.prevX, car.x, alpha);
       const cy = lerp(car.prevY, car.y, alpha);
       const ch = lerp(car.prevH, car.h, alpha);
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = COLORS.ground;
-      ctx.fillRect(0, 0, W, H);
+      if (layers.has('bg')) {
+        ctx.fillStyle = COLORS.ground;
+        ctx.fillRect(0, 0, W, H);
+      }
       const cam = followCar(cx, cy, W, H);
       ctx.translate(cam.x, cam.y);
 
-
-      // road
-      const pts = track.pts;
-      const a = Math.max(0, g.trackIndex - VIEW.drawBehind);
-      const b = Math.min(pts.length, g.trackIndex + VIEW.drawAhead);
-      ctx.beginPath();
-      ctx.moveTo(pts[a].x, pts[a].y);
-      for (let i = a + 1; i < b; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = COLORS.road;
-      ctx.lineWidth = TRACK.halfWidth * 2;
-      ctx.stroke();
-
-      // skids
-      // (globalAlpha rather than an rgba() string per mark: no per-frame string garbage)
-      ctx.fillStyle = COLORS.skid;
-      for (const m of g.skids.marks) {
-        ctx.globalAlpha = m.alpha;
-        ctx.fillRect(m.x - 1.5, m.y - 1.5, 3, 3);
-      }
-      ctx.globalAlpha = 1;
-
-      // car
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(ch);
-      ctx.fillStyle = COLORS.car;
-      const l = CAR.length, w = CAR.width;
-      ctx.beginPath();
-      if ('roundRect' in ctx) ctx.roundRect(-l / 2, -w / 2, l, w, 3);
-      else (ctx as CanvasRenderingContext2D).rect(-l / 2, -w / 2, l, w);
-      ctx.fill();
-      ctx.fillStyle = COLORS.windshield;
-      ctx.fillRect(4, -5, 4, 10);
-      ctx.restore();
-
+      if (layers.has('road')) drawRoad(g);
+      if (layers.has('skids')) drawSkids(g);
+      if (layers.has('car')) drawCar(cx, cy, ch);
       // trees last, so an off-road car (zen) drives under them
-      drawTrees(scenery.visible(g, -cam.x, -cam.y, W - cam.x, H - cam.y), cam);
+      if (layers.has('trees')) {
+        const trees = scenery.visible(g, -cam.x, -cam.y, W - cam.x, H - cam.y);
+        drawTrees(trees, cam);
+        stats.trees = trees.length;
+        stats.cellsGenerated = scenery.stats.cellsGenerated;
+        stats.cellsEvicted = scenery.stats.cellsEvicted;
+      }
     },
   };
 
+  function drawRoad(g: GameState) {
+    const pts = g.track.pts;
+    const a = Math.max(0, g.trackIndex - VIEW.drawBehind);
+    const b = Math.min(pts.length, g.trackIndex + VIEW.drawAhead);
+    ctx.beginPath();
+    ctx.moveTo(pts[a].x, pts[a].y);
+    for (let i = a + 1; i < b; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = COLORS.road;
+    ctx.lineWidth = TRACK.halfWidth * 2;
+    ctx.stroke();
+  }
+
   /**
-   * Draw tree sprites from the atlas as 1:1 device-pixel copies: positions snap to
-   * whole device pixels and the atlas is already at device scale.
+   * One pass per darkness level, integer coordinates only. Fractional numbers
+   * passed to canvas calls get boxed, which made ~1 MB/s of garbage.
+   */
+  function drawSkids(g: GameState) {
+    ctx.fillStyle = COLORS.skid;
+    const marks = g.skids.marks;
+    for (let level = 1; level <= SKIDS.levels; level++) {
+      ctx.globalAlpha = ALPHAS[level];
+      for (let i = 0; i < marks.length; i++) {
+        const m = marks[i];
+        if (m.level === level) ctx.fillRect(m.x - 1, m.y - 1, 3, 3);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCar(x: number, y: number, h: number) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(h);
+    ctx.fillStyle = COLORS.car;
+    const l = CAR.length, w = CAR.width;
+    ctx.beginPath();
+    if ('roundRect' in ctx) ctx.roundRect(-l / 2, -w / 2, l, w, 3);
+    else (ctx as CanvasRenderingContext2D).rect(-l / 2, -w / 2, l, w);
+    ctx.fill();
+    ctx.fillStyle = COLORS.windshield;
+    ctx.fillRect(4, -5, 4, 10);
+    ctx.restore();
+  }
+
+  /**
+   * Draw tree sprites from the atlas as 1:1 copies in device-pixel space. Every
+   * argument is a whole number, so the calls are exact and create no garbage.
    */
   function drawTrees(trees: Tree[], cam: { x: number; y: number }) {
     const { image, rects, scale } = atlas!;
     const k = scale / dpr; // CSS px per art pixel
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = false; // resets whenever the canvas is resized
-    for (const t of trees) {
-      const s = sprites[t.sprite], r = rects[t.sprite];
-      const x = Math.round((t.x - s.cx * k + cam.x) * dpr) / dpr - cam.x;
-      const y = Math.round((t.y - s.cy * k + cam.y) * dpr) / dpr - cam.y;
-      ctx.drawImage(image, r.x, r.y, r.w, r.h, x, y, r.w / dpr, r.h / dpr);
+    for (let i = 0; i < trees.length; i++) {
+      const t = trees[i], s = sprites[t.sprite], r = rects[t.sprite];
+      const x = Math.round((t.x - s.cx * k + cam.x) * dpr);
+      const y = Math.round((t.y - s.cy * k + cam.y) * dpr);
+      ctx.drawImage(image, r.x, r.y, r.w, r.h, x, y, r.w, r.h);
     }
   }
 }

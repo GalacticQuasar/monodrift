@@ -5,7 +5,7 @@ import { KEYS, storage } from './lib/storage';
 import { startLoop } from './loop';
 import { createRenderer } from './render/renderer';
 import { createGame, step } from './sim/game';
-import { createFpsMeter } from './ui/fps';
+import { createDebug, debugLayers } from './ui/debug';
 import { createHud } from './ui/hud';
 import { createSettings } from './ui/settings';
 
@@ -14,9 +14,9 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 
 const canvas = $<HTMLCanvasElement>('#c');
-const renderer = createRenderer(canvas);
+const renderer = createRenderer(canvas, debugLayers());
 const hud = createHud($('#score'), $('#msg'));
-const fps = createFpsMeter();
+const debug = createDebug();
 
 let best = Number(storage.get(KEYS.best)) || 0;
 let game = createGame(randomSeed());
@@ -47,26 +47,50 @@ const input = createInput(canvas, {
     if (performance.now() < retryAllowedAt) return true; // swallow the tap
     game = createGame(randomSeed(), 'run');
     hud.hideMessage();
+    debug?.event('start');
     return true;
   },
 });
+
+function tick(dt: number) {
+  if (step(game, input.intent(), dt, { crash: !settings.zen }) !== 'crash') return;
+  retryAllowedAt = performance.now() + UI.retryDelayMs;
+  const newBest = game.score > best;
+  if (newBest) {
+    best = game.score;
+    storage.set(KEYS.best, String(best));
+  }
+  hud.showGameOver(game.score, best, UI.retryDelayMs);
+  if (debug) {
+    debug.event(newBest ? 'crash (new best saved)' : 'crash');
+    setTimeout(() => debug.event('retry hint fades in'), UI.retryDelayMs);
+  }
+}
+
+// debug timing (only with ?debug); reused object so measuring makes no garbage
+const counters = { steps: 0, simMs: 0, drawMs: 0, trees: 0, cellsGenerated: 0, cellsEvicted: 0, skids: 0 };
 
 startLoop({
   hz: SIM_HZ,
   maxFrameTime: MAX_FRAME_TIME,
   update(dt) {
-    if (step(game, input.intent(), dt, { crash: !settings.zen }) !== 'crash') return;
-    retryAllowedAt = performance.now() + UI.retryDelayMs;
-    if (game.score > best) {
-      best = game.score;
-      storage.set(KEYS.best, String(best));
-    }
-    hud.showGameOver(game.score, best, UI.retryDelayMs);
+    if (!debug) return tick(dt);
+    const t0 = performance.now();
+    tick(dt);
+    counters.steps++;
+    counters.simMs += performance.now() - t0;
   },
-  render(alpha) {
-    fps?.frame(performance.now());
+  render(alpha, now) {
+    const t0 = debug ? performance.now() : 0;
     renderer.draw(game, alpha);
     hud.setScore(game.phase === 'ready' || settings.zen ? '' : String(game.score));
+    if (!debug) return;
+    counters.drawMs = performance.now() - t0;
+    Object.assign(counters, renderer.stats);
+    counters.skids = game.skids.marks.length;
+    debug.frame(now, counters);
+    counters.steps = 0;
+    counters.simMs = 0;
   },
 });
 

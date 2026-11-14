@@ -5,7 +5,8 @@ export function startLoop(opts: {
   hz: number;
   maxFrameTime: number;
   update: (dt: number) => void;
-  render: (alpha: number) => void;
+  /** `now` is the frame's requestAnimationFrame timestamp. */
+  render: (alpha: number, now: number) => void;
 }): void {
   const dt = 1 / opts.hz;
   let acc = 0;
@@ -18,7 +19,7 @@ export function startLoop(opts: {
       opts.update(dt);
       acc -= dt;
     }
-    opts.render(acc / dt);
+    opts.render(acc / dt, now);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

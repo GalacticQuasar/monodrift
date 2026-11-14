@@ -2,8 +2,13 @@
 
 /** Physics steps per second. Rendering runs at display rate and interpolates. */
 export const SIM_HZ = 120;
-/** Longest frame (s) the loop will catch up on, e.g. after a tab switch. */
-export const MAX_FRAME_TIME = 0.1;
+/**
+ * Longest frame (s) the sim catches up on. Anything longer just runs in slow motion
+ * for that frame. Browsers/OSes occasionally drop a few frames (e.g. Windows DWM
+ * hiccups) and catching up fully makes the car visibly jump; capping it turns the
+ * jump into a brief pause. 35 ms still fully covers 30 fps devices (33.3 ms frames).
+ */
+export const MAX_FRAME_TIME = 0.035;
 
 export const TRACK = {
   segmentLength: 20,
@@ -50,6 +55,8 @@ export const SKIDS = {
   slipThreshold: 0.22,
   alphaPerSlip: 0.5,
   maxAlpha: 0.35,
+  /** Darkness steps between 0 and maxAlpha. */
+  levels: 7,
   /** Distance (px) between skid dots, so marks don't depend on frame rate. */
   spacing: 4,
   wheelBack: 9,
