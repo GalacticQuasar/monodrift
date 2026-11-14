@@ -5,6 +5,7 @@ import { SCENERY, TRACK } from '../config';
 import type { GameState } from '../sim/game';
 import { createRng } from '../sim/rng';
 import type { Track } from '../sim/track';
+import { treeReach } from './sprites';
 
 export interface Tree {
   x: number;
@@ -29,11 +30,13 @@ export interface Scenery {
    * The returned array is reused: valid until the next call.
    */
   visible(g: GameState, left: number, top: number, right: number, bottom: number): Tree[];
-  /** Running totals, for debugging. */
-  readonly stats: { cellsGenerated: number; cellsEvicted: number };
+  /** For debugging: running totals, and trees returned by the last visible() call. */
+  readonly stats: { cellsGenerated: number; cellsEvicted: number; trees: number };
 }
 
 const CELL = SCENERY.cellSize;
+/** The biggest tree can poke into view from a neighbouring cell by this much (px). */
+const VIEW_PAD = treeReach(SIZES[SIZES.length - 1]) * SCENERY.pixelScale;
 
 function hash(seed: number, a: number, b: number): number {
   let h = seed ^ Math.imul(a, 0x9e3779b1) ^ Math.imul(b, 0x85ebca77);
@@ -82,7 +85,7 @@ function generateCell(g: GameState, cx: number, cy: number): Tree[] {
       const sizeIdx = Math.min(SIZES.length - 1, Math.floor(rng() * SIZES.length * (0.5 + d / 2)));
       const sprite = sizeIdx * SCENERY.variantsPerSize + Math.floor(rng() * SCENERY.variantsPerSize);
       // clearance covers canopy, trunk and ground shadow below it
-      const r = (SIZES[sizeIdx] * 1.8 + 2) * SCENERY.pixelScale;
+      const r = treeReach(SIZES[sizeIdx]) * SCENERY.pixelScale;
       if (clearOfRoad(g.track, from, x, y, r)) trees.push({ x, y, r, sprite });
     }
   }
@@ -93,7 +96,7 @@ export function createScenery(): Scenery {
   let owner: GameState | null = null;
   const cells = new Map<number, Cell>();
   const out: Tree[] = []; // reused every frame to avoid garbage
-  const stats = { cellsGenerated: 0, cellsEvicted: 0 };
+  const stats = { cellsGenerated: 0, cellsEvicted: 0, trees: 0 };
 
   return {
     stats,
@@ -103,10 +106,8 @@ export function createScenery(): Scenery {
         cells.clear();
       }
 
-      // biggest tree plus its shadow can poke into view from a neighbouring cell
-      const pad = (SIZES[SIZES.length - 1] * 2 + 4) * SCENERY.pixelScale;
-      const x0 = Math.floor((left - pad) / CELL), x1 = Math.floor((right + pad) / CELL);
-      const y0 = Math.floor((top - pad) / CELL), y1 = Math.floor((bottom + pad) / CELL);
+      const x0 = Math.floor((left - VIEW_PAD) / CELL), x1 = Math.floor((right + VIEW_PAD) / CELL);
+      const y0 = Math.floor((top - VIEW_PAD) / CELL), y1 = Math.floor((bottom + VIEW_PAD) / CELL);
 
       // evict cells far from view (never the visible ones, so no regeneration hitch)
       if (cells.size > SCENERY.maxCachedCells) {
@@ -135,6 +136,7 @@ export function createScenery(): Scenery {
         }
       }
       out.length = n;
+      stats.trees = n;
       // 3/4-view sprites: draw back to front so lower trees overlap higher ones.
       // Cells come row by row with their trees pre-sorted, so `out` is nearly sorted:
       // an in-place insertion sort is close to linear and allocates nothing.

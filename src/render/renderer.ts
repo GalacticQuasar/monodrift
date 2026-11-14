@@ -3,7 +3,7 @@
 import { CAR, COLORS, SCENERY, SKIDS, TRACK, VIEW } from '../config';
 import type { GameState } from '../sim/game';
 import { followCar } from './camera';
-import { createScenery, type Tree } from './scenery';
+import { createScenery, type Scenery, type Tree } from './scenery';
 import { buildAtlas, buildTreeSprites, type Atlas } from './sprites';
 
 /** Drawing layers; debug mode can switch them off to isolate rendering problems. */
@@ -13,8 +13,8 @@ export const ALL_LAYERS: readonly Layer[] = ['bg', 'road', 'skids', 'car', 'tree
 export interface Renderer {
   /** `alpha` (0..1) blends between the previous and current sim step. */
   draw(g: GameState, alpha: number): void;
-  /** For debugging (updated in place each frame): trees drawn, scenery running totals. */
-  readonly stats: { trees: number; cellsGenerated: number; cellsEvicted: number };
+  /** For debugging (updated in place): trees drawn last frame, scenery running totals. */
+  readonly stats: Scenery['stats'];
 }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -43,10 +43,8 @@ export function createRenderer(canvas: HTMLCanvasElement, layers: ReadonlySet<La
   addEventListener('resize', resize);
   resize();
 
-  const stats = { trees: 0, cellsGenerated: 0, cellsEvicted: 0 };
-
   return {
-    stats,
+    stats: scenery.stats,
     draw(g, alpha) {
       const { car } = g;
       const cx = lerp(car.prevX, car.x, alpha);
@@ -65,13 +63,7 @@ export function createRenderer(canvas: HTMLCanvasElement, layers: ReadonlySet<La
       if (layers.has('skids')) drawSkids(g);
       if (layers.has('car')) drawCar(cx, cy, ch);
       // trees last, so an off-road car (zen) drives under them
-      if (layers.has('trees')) {
-        const trees = scenery.visible(g, -cam.x, -cam.y, W - cam.x, H - cam.y);
-        drawTrees(trees, cam);
-        stats.trees = trees.length;
-        stats.cellsGenerated = scenery.stats.cellsGenerated;
-        stats.cellsEvicted = scenery.stats.cellsEvicted;
-      }
+      if (layers.has('trees')) drawTrees(scenery.visible(g, -cam.x, -cam.y, W - cam.x, H - cam.y), cam);
     },
   };
 

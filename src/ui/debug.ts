@@ -32,7 +32,6 @@ export interface Debug {
 /** Chrome's Long Animation Frame entry (frames > 50 ms), with the fields we use. */
 interface LoafEntry extends PerformanceEntry {
   blockingDuration: number;
-  renderStart: number;
   styleAndLayoutStart: number;
   scripts: { invoker: string; sourceURL: string; sourceFunctionName: string; duration: number; forcedStyleAndLayoutDuration: number }[];
 }
@@ -60,11 +59,11 @@ export function debugLayers(): Set<Layer> | undefined {
 // Chrome-only, non-standard
 const heapUsed = (): number => (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? NaN;
 
-function ring() {
+function ring(n: number) {
   return {
-    t: new Float64Array(N), delta: new Float32Array(N), steps: new Uint8Array(N),
-    sim: new Float32Array(N), draw: new Float32Array(N), newCells: new Uint16Array(N),
-    evicted: new Uint16Array(N), trees: new Uint16Array(N), skids: new Uint16Array(N), heap: new Float32Array(N),
+    t: new Float64Array(n), delta: new Float32Array(n), steps: new Uint8Array(n),
+    sim: new Float32Array(n), draw: new Float32Array(n), newCells: new Uint16Array(n),
+    evicted: new Uint16Array(n), trees: new Uint16Array(n), skids: new Uint16Array(n), heap: new Float32Array(n),
   };
 }
 
@@ -72,8 +71,8 @@ export function createDebug(): Debug | null {
   const params = new URLSearchParams(location.search);
   if (!params.has('debug') && !params.has('fps')) return null;
 
-  const f = ring(); // all frames
-  const h = ring(); // hitch frames only (plus prev delta and gap)
+  const f = ring(N); // all frames
+  const h = ring(MAX_HITCHES); // hitch frames only
   const hPrev = new Float32Array(MAX_HITCHES);
   let count = 0, hitchCount = 0, gcCount = 0, gcOnHitch = 0;
   let lastNow = 0, lastCells = 0, lastEvicted = 0, lastHeap = heapUsed(), startT = 0;

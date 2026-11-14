@@ -1,5 +1,5 @@
 // Pixel-art tree sprites (3/4 view: lumpy canopy over a short trunk), generated
-// once at startup at art resolution and drawn scaled up with smoothing off.
+// once at startup at art resolution and packed into a device-scaled atlas.
 
 import { COLORS, SCENERY } from '../config';
 import { createRng, type Rng } from '../sim/rng';
@@ -76,9 +76,22 @@ interface Lobe {
   r: number;
 }
 
+// sprite geometry shared with scenery placement (see treeReach)
+const trunkHeight = (R: number) => Math.max(2, Math.round(R * 0.45)); // visible trunk below the canopy
+const shadowRadii = (R: number) => ({ rx: R * 0.9, ry: Math.max(1.2, R * 0.35) });
+
+/**
+ * Farthest painted pixel from the canopy centre, in art pixels: canopy, trunk and
+ * ground shadow. Scenery uses it for road clearance and view culling, so it stays
+ * correct if the tree art changes. (Pure maths: no DOM, safe to import in tests.)
+ */
+export function treeReach(R: number): number {
+  return R + 1 + trunkHeight(R) + shadowRadii(R).ry;
+}
+
 function makeTree(R: number, rng: Rng): Sprite {
   const pad = 2;
-  const trunkH = Math.max(2, Math.round(R * 0.45)); // visible trunk below the canopy
+  const trunkH = trunkHeight(R);
   const trunkW = R >= 5 ? 2 : 1;
   const cx = R + pad, cy = R + pad;
   const baseY = cy + R + 1 + trunkH; // row just below the trunk's foot
@@ -103,10 +116,10 @@ function makeTree(R: number, rng: Rng): Sprite {
     lobes.sort((a, b) => a.y - b.y);
   }
 
-  // rasterise lobes back to front; each pixel remembers its (frontmost) lobe and tone
-  const owner = new Int8Array(w * h).fill(-1);
-  const tone = new Int8Array(w * h);
-  lobes.forEach((l, li) => {
+  // rasterise lobes back to front, so each pixel keeps its frontmost lobe's tone
+  const filled = new Uint8Array(w * h);
+  const tone = new Uint8Array(w * h);
+  for (const l of lobes) {
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const nx = (x + 0.5 - l.x) / l.r, ny = (y + 0.5 - l.y) / l.r;
@@ -117,12 +130,12 @@ function makeTree(R: number, rng: Rng): Sprite {
         let t = g > 0.3 ? 2 : g > -0.35 ? 1 : 0;
         // ...and lobes on the lit side get a small highlight cap
         if (lobes.length > 1 && g > -0.1 && -(nx * 0.6 + ny * 0.8) > 0.55) t = 3;
-        owner[y * w + x] = li;
+        filled[y * w + x] = 1;
         tone[y * w + x] = t;
       }
     }
-  });
-  const ownerAt = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? -1 : owner[y * w + x]);
+  }
+  const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && filled[y * w + x] === 1;
 
   const image = canvas(w, h);
   const ctx = image.getContext('2d')!;
@@ -133,7 +146,7 @@ function makeTree(R: number, rng: Rng): Sprite {
 
   // ground shadow baked in under the tree: a flat ellipse at the foot of the trunk.
   // (Trees are kept clear of the road including this shadow, so it never needs its own layer.)
-  const rx = R * 0.9, ry = Math.max(1.2, R * 0.35);
+  const { rx, ry } = shadowRadii(R);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       if (((x - cx - 0.5) / rx) ** 2 + ((y - baseY + 0.5) / ry) ** 2 <= 1) px(COLORS.treeShadow, x, y);
@@ -149,8 +162,8 @@ function makeTree(R: number, rng: Rng): Sprite {
   const tones = COLORS.treeTones;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (ownerAt(x, y) < 0) continue;
-      const silhouette = ownerAt(x + 1, y) < 0 || ownerAt(x - 1, y) < 0 || ownerAt(x, y + 1) < 0 || ownerAt(x, y - 1) < 0;
+      if (!inside(x, y)) continue;
+      const silhouette = !inside(x + 1, y) || !inside(x - 1, y) || !inside(x, y + 1) || !inside(x, y - 1);
       px(silhouette ? COLORS.treeOutline : tones[tone[y * w + x]], x, y);
     }
   }
