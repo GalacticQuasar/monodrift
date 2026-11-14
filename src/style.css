@@ -13,10 +13,34 @@
   --line: #ccc;
   --shade: #d4d4d4; /* bevel on the bottom-right inside a button */
   --shadow: rgba(0, 0, 0, 0.18);
+  --text2: #555; /* secondary body text in cards and panels */
+  --faint: #999;
+  --disabled: #aaa;
+  --ink-shade: #444; /* bevel inside a pressed/primary (ink) button */
+  --highlight: #e4e4e4; /* your own leaderboard row */
+  --backdrop: rgba(0, 0, 0, 0.25);
   --pixel: 'Silkscreen', ui-monospace, monospace;
   --sans: -apple-system, system-ui, Helvetica, Arial, sans-serif;
   /* 2px outline drawn with shadows on each side only, so the corners stay notched */
   --frame: 0 -2px var(--ink), 0 2px var(--ink), -2px 0 var(--ink), 2px 0 var(--ink);
+}
+/* dark: set on <html> by index.html / ui/theme.ts (Dark setting: auto follows the device).
+   Ground matches COLORS.dark.ground in config.ts. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ground: #1b1b1b;
+  --paper: #262626;
+  --ink: #ececec;
+  --muted: #9a9a9a;
+  --line: #4a4a4a;
+  --shade: #3a3a3a;
+  --shadow: rgba(0, 0, 0, 0.5);
+  --text2: #b0b0b0;
+  --faint: #777;
+  --disabled: #666;
+  --ink-shade: #bdbdbd;
+  --highlight: #3a3a3a;
+  --backdrop: rgba(0, 0, 0, 0.55);
 }
 
 html,
@@ -118,10 +142,10 @@ button.primary,
 button[aria-pressed='true'] {
   color: var(--paper);
   background: var(--ink);
-  box-shadow: var(--frame), inset -2px -2px #444;
+  box-shadow: var(--frame), inset -2px -2px var(--ink-shade);
 }
 button:disabled {
-  color: #aaa;
+  color: var(--disabled);
   cursor: default;
 }
 
@@ -201,7 +225,7 @@ button:disabled {
 }
 .card p {
   margin: 6px 0 12px;
-  color: #555;
+  color: var(--text2);
 }
 #install div {
   display: flex;
@@ -217,7 +241,7 @@ button:disabled {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--backdrop);
 }
 .modal .box {
   width: calc(100% - 6px);
@@ -329,6 +353,7 @@ button:disabled {
   margin: 2px;
   font: 16px var(--sans); /* 16px: iOS doesn't zoom in on focus */
   color: var(--ink);
+  background: var(--paper);
   padding: 6px 10px;
   border: none;
   border-radius: 0;
@@ -373,12 +398,12 @@ button:disabled {
   padding: 5px 6px;
 }
 #board li.me {
-  background: #e4e4e4;
+  background: var(--highlight);
   font-weight: 600;
 }
 #board li.gap {
   justify-content: center;
-  color: #999;
+  color: var(--faint);
 }
 #board .rank {
   width: 2.5em;
@@ -401,7 +426,7 @@ button:disabled {
 }
 #board .you p {
   margin: 10px 0 6px;
-  color: #555;
+  color: var(--text2);
 }
 #board .link {
   margin: 0;

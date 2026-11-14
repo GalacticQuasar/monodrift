@@ -138,15 +138,46 @@ export const SCENERY = {
   maxCachedCells: 800,
 } as const;
 
-export const COLORS = {
-  ground: '#e8e8e8',
-  road: '#fff',
-  car: '#111',
-  windshield: '#e8e8e8',
-  skid: '#000',
-  treeShadow: 'rgba(0,0,0,0.1)',
+export interface Palette {
+  readonly ground: string;
+  readonly road: string;
+  readonly car: string;
+  readonly windshield: string;
+  readonly skid: string;
+  /** Multiplies SKIDS.maxAlpha (marks need more strength on a dark road). */
+  readonly skidStrength: number;
+  readonly treeShadow: string;
   /** Pixel-art tree tones: outline, trunk, then canopy shades dark → light. */
-  treeOutline: '#4d4d4d',
-  treeTrunk: '#5e5e5e',
-  treeTones: ['#7a7a7a', '#939393', '#acacac', '#c6c6c6'],
-} as const;
+  readonly treeOutline: string;
+  readonly treeTrunk: string;
+  readonly treeTones: readonly [string, string, string, string];
+}
+
+/** Canvas colours per theme (the DOM UI's colours are CSS tokens in style.css). */
+export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
+  light: {
+    ground: '#e8e8e8',
+    road: '#fff',
+    car: '#111',
+    windshield: '#e8e8e8',
+    skid: '#000',
+    skidStrength: 1,
+    treeShadow: 'rgba(0,0,0,0.1)',
+    treeOutline: '#4d4d4d',
+    treeTrunk: '#5e5e5e',
+    treeTones: ['#7a7a7a', '#939393', '#acacac', '#c6c6c6'],
+  },
+  // dark: night road; the car is the lightest thing on screen instead of the darkest
+  dark: {
+    ground: '#1b1b1b',
+    road: '#383838',
+    car: '#f0f0f0',
+    windshield: '#1b1b1b',
+    skid: '#000',
+    skidStrength: 2,
+    treeShadow: 'rgba(0,0,0,0.35)',
+    treeOutline: '#0f0f0f',
+    treeTrunk: '#2a2a2a',
+    treeTones: ['#2e2e2e', '#3a3a3a', '#474747', '#565656'],
+  },
+};

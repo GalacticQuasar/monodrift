@@ -18,6 +18,8 @@ export const KEYS = {
   sensitivity: 'monodrift-sensitivity',
   /** 'off' to hide the trees. */
   trees: 'monodrift-trees',
+  /** Dark mode: 'off' (also when unset), 'on' or 'auto' (follow the device). Read before load in index.html. */
+  dark: 'monodrift-dark',
 } as const;
 
 export const storage = {

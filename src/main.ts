@@ -1,5 +1,5 @@
 import './style.css';
-import { MAX_FRAME_TIME, SIM_HZ, UI } from './config';
+import { COLORS, MAX_FRAME_TIME, SIM_HZ, UI } from './config';
 import { createInput } from './input/input';
 import { DESKTOP } from './lib/device';
 import { KEYS, storage } from './lib/storage';
@@ -14,6 +14,7 @@ import { createHud } from './ui/hud';
 import { createInstallPrompt } from './ui/install';
 import { createLeaderboard } from './ui/leaderboard';
 import { createSettings, sensitivityFactor } from './ui/settings';
+import { watchTheme } from './ui/theme';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
@@ -23,7 +24,7 @@ const canvas = $<HTMLCanvasElement>('#c');
 // layers drawn; the Trees setting adds/removes 'trees' unless ?render=… chose them
 const fixedLayers = debugLayers();
 const layers = fixedLayers ?? new Set(ALL_LAYERS);
-const renderer = createRenderer(canvas, layers);
+const renderer = createRenderer(canvas, COLORS.light, layers); // palette set by watchTheme below
 const hud = createHud($('#score'), $('#msg'));
 const debug = createDebug();
 autoHideCursor();
@@ -58,8 +59,15 @@ const settings = createSettings($('#settings-btn'), $('#settings'), changed => {
     if (game.phase === 'ready') hud.showStart(settings.mode, settings.zen, settings.daily);
   } else if (changed === 'trees') {
     applyTrees();
+  } else if (changed === 'dark') {
+    updateTheme();
   }
 });
+
+const updateTheme = watchTheme(
+  () => settings.dark,
+  colors => renderer.setPalette(colors),
+);
 
 function applyTrees() {
   if (fixedLayers) return;

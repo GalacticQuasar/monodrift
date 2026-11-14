@@ -1,6 +1,6 @@
 // Draws a GameState. Read-only: never modifies the state.
 
-import { CAR, COLORS, SCENERY, SKIDS, TRACK, VIEW } from '../config';
+import { CAR, SCENERY, SKIDS, TRACK, VIEW, type Palette } from '../config';
 import type { GameState } from '../sim/game';
 import { followCar } from './camera';
 import { createScenery, type Scenery, type Tree } from './scenery';
@@ -15,18 +15,21 @@ export interface Renderer {
   draw(g: GameState, alpha: number): void;
   /** For debugging (updated in place): trees drawn last frame, scenery running totals. */
   readonly stats: Scenery['stats'];
+  /** Switch colours (theme change): regenerates the tree sprites, so not per frame. */
+  setPalette(colors: Palette): void;
 }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** Skid opacity per darkness level (index 0 unused). */
-const ALPHAS = Array.from({ length: SKIDS.levels + 1 }, (_, i) => (i / SKIDS.levels) * SKIDS.maxAlpha);
+const skidAlphas = (colors: Palette) => Array.from({ length: SKIDS.levels + 1 }, (_, i) => Math.min(1, (i / SKIDS.levels) * SKIDS.maxAlpha * colors.skidStrength));
 
-export function createRenderer(canvas: HTMLCanvasElement, layers: ReadonlySet<Layer> = new Set(ALL_LAYERS)): Renderer {
+export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layers: ReadonlySet<Layer> = new Set(ALL_LAYERS)): Renderer {
   // opaque: we paint every pixel each frame, so the browser needn't blend with the page
   const ctx = canvas.getContext('2d', { alpha: false })!;
   const scenery = createScenery();
-  const sprites = buildTreeSprites();
+  let sprites = buildTreeSprites(colors);
+  let alphas = skidAlphas(colors);
   let atlas: Atlas | null = null;
   let W = 0, H = 0, dpr = 1;
 
@@ -45,6 +48,13 @@ export function createRenderer(canvas: HTMLCanvasElement, layers: ReadonlySet<La
 
   return {
     stats: scenery.stats,
+    setPalette(next) {
+      if (next === colors) return;
+      colors = next;
+      alphas = skidAlphas(colors);
+      sprites = buildTreeSprites(colors);
+      if (atlas) atlas = buildAtlas(sprites, atlas.scale);
+    },
     draw(g, alpha) {
       const { car } = g;
       const cx = lerp(car.prevX, car.x, alpha);
@@ -53,7 +63,7 @@ export function createRenderer(canvas: HTMLCanvasElement, layers: ReadonlySet<La
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (layers.has('bg')) {
-        ctx.fillStyle = COLORS.ground;
+        ctx.fillStyle = colors.ground;
         ctx.fillRect(0, 0, W, H);
       }
       const cam = followCar(cx, cy, W, H);
@@ -76,7 +86,7 @@ export function createRenderer(canvas: HTMLCanvasElement, layers: ReadonlySet<La
     for (let i = a + 1; i < b; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    ctx.strokeStyle = COLORS.road;
+    ctx.strokeStyle = colors.road;
     ctx.lineWidth = TRACK.halfWidth * 2;
     ctx.stroke();
   }
@@ -86,10 +96,10 @@ export function createRenderer(canvas: HTMLCanvasElement, layers: ReadonlySet<La
    * passed to canvas calls get boxed, which made ~1 MB/s of garbage.
    */
   function drawSkids(g: GameState) {
-    ctx.fillStyle = COLORS.skid;
+    ctx.fillStyle = colors.skid;
     const marks = g.skids.marks;
     for (let level = 1; level <= SKIDS.levels; level++) {
-      ctx.globalAlpha = ALPHAS[level];
+      ctx.globalAlpha = alphas[level];
       for (let i = 0; i < marks.length; i++) {
         const m = marks[i];
         if (m.level === level) ctx.fillRect(m.x - 1, m.y - 1, 3, 3);
@@ -102,13 +112,13 @@ export function createRenderer(canvas: HTMLCanvasElement, layers: ReadonlySet<La
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(h);
-    ctx.fillStyle = COLORS.car;
+    ctx.fillStyle = colors.car;
     const l = CAR.length, w = CAR.width;
     ctx.beginPath();
     if ('roundRect' in ctx) ctx.roundRect(-l / 2, -w / 2, l, w, 3);
     else (ctx as CanvasRenderingContext2D).rect(-l / 2, -w / 2, l, w);
     ctx.fill();
-    ctx.fillStyle = COLORS.windshield;
+    ctx.fillStyle = colors.windshield;
     ctx.fillRect(4, -5, 4, 10);
     ctx.restore();
   }

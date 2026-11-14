@@ -5,6 +5,7 @@ import { INPUT } from '../config';
 import type { SteerMode } from '../input/input';
 import { DESKTOP } from '../lib/device';
 import { KEYS, storage } from '../lib/storage';
+import { parseDark, type DarkSetting } from './theme';
 
 export interface Settings {
   readonly mode: SteerMode;
@@ -16,6 +17,8 @@ export interface Settings {
   readonly sensitivity: number;
   /** Draw the trees. */
   readonly trees: boolean;
+  /** Dark mode: follow the device, or always on/off. */
+  readonly dark: DarkSetting;
 }
 
 export interface SettingsPanel extends Settings {
@@ -48,6 +51,7 @@ export function createSettings(button: HTMLButtonElement, panel: HTMLElement, on
     daily: storage.get(KEYS.road) === 'daily',
     sensitivity: loadLevel(),
     trees: storage.get(KEYS.trees) !== 'off',
+    dark: parseDark(storage.get(KEYS.dark)),
   };
   let isOpen = false;
 
@@ -158,6 +162,20 @@ export function createSettings(button: HTMLButtonElement, panel: HTMLElement, on
         onChange('trees');
       },
     ),
+    choice<DarkSetting>(
+      'Dark',
+      [
+        ['off', 'Off'],
+        ['on', 'On'],
+        ['auto', 'Auto'],
+      ],
+      () => state.dark,
+      v => {
+        state.dark = v;
+        storage.set(KEYS.dark, v);
+        onChange('dark');
+      },
+    ),
   ];
 
   const box = el(
@@ -206,6 +224,9 @@ export function createSettings(button: HTMLButtonElement, panel: HTMLElement, on
     },
     get trees() {
       return state.trees;
+    },
+    get dark() {
+      return state.dark;
     },
     get open() {
       return isOpen;

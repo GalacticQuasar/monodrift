@@ -10,6 +10,7 @@ Features:
 - Track Mode (set track for a day, whoever gets lowest time to finish wins)
 - Curbs around outer edge of turns- if you drift on them you get a speed boost (which helps accel into the next straight)
   - Could be styled white&grey alternating
+- Curbs in general? Serves as visual indicator you are going out of bounds, only if you go past it you end run
 
 Art:
 - Make cottages / campfires

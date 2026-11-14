@@ -52,9 +52,13 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - The daily road seed comes from the UTC date (`sim/daily.ts`). Starting a run from
   the start screen keeps the road already on screen; retries get a new one.
 - Settings and identity live in localStorage under `monodrift-*` (`lib/storage.ts`).
-- Two top buttons only: Leaderboard and Settings. Road, Zen, Steering, Sensitivity
-  and Trees live in the Settings panel (`ui/settings.ts`); changing Road or Zen
+- Two top buttons only: Leaderboard and Settings (icons on phones). Road, Zen,
+  Steering, Sensitivity, Trees and Dark live in the Settings panel (`ui/settings.ts`); changing Road or Zen
   starts over. Sensitivity scales steering in `input/`, never in the sim.
+- Dark mode: the Dark setting (Off by default / On / Auto follows the device) sets
+  `data-theme` on `<html>` (`ui/theme.ts`; an inline script in `index.html` does it
+  before first paint). The canvas uses `COLORS.light`/`COLORS.dark`, the DOM uses the
+  CSS tokens in `style.css`: new colours need both values, never hardcode one.
 - UI style: pixel/retro to match the art. Silkscreen (self-hosted in `src/fonts/`)
   for buttons, titles and the score; system sans for body text. Buttons and panels
   use the notched pixel frame (`--frame` in `style.css`), square corners and hard

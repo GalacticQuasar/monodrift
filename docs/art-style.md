@@ -10,7 +10,7 @@ Scenery should add texture without competing with the road or the car.
 
 | Rule | Value / where |
 | --- | --- |
-| Colour | **Grayscale only.** Use the tones in `COLORS` (`src/config.ts`); add new greys there rather than inline. Nothing darker than `treeOutline` (`#4d4d4d`) so the car (`#111`) stays the darkest thing on screen. |
+| Colour | **Grayscale only.** Use the tones in `COLORS` (`src/config.ts`); add new greys there rather than inline. Every colour exists twice, in `COLORS.light` and `COLORS.dark` (dark mode), and sprites are generated from the active palette, so give each new tone both values. Light: nothing darker than `treeOutline` (`#4d4d4d`), so the car (`#111`) stays the darkest thing on screen. Dark: the reverse; nothing lighter than the brightest tree tone (`#565656`), so the white car stays the lightest. |
 | Projection | **3/4 view**: objects are seen from above and slightly in front, so they show a top and a front face (trees: canopy over a visible trunk). Pure top-down blobs read as rocks. |
 | Light | From the **top-left**. Lit faces/caps toward the upper-left, darkest band toward the lower-right. |
 | Outline | **1 px dark outline around the silhouette only.** No internal outlines between parts. |
@@ -84,7 +84,8 @@ Files: `src/render/sprites.ts` (art), `src/render/scenery.ts` (placement),
 
   ```js
   const { buildTreeSprites } = await import('/src/render/sprites.ts');
-  const sprites = buildTreeSprites();
+  const { COLORS } = await import('/src/config.ts');
+  const sprites = buildTreeSprites(COLORS.light); // or COLORS.dark
   const c = Object.assign(document.createElement('canvas'), { width: 1280, height: 720 });
   Object.assign(c.style, { position: 'fixed', inset: 0, zIndex: 99, background: '#e8e8e8' });
   document.body.append(c);

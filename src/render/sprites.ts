@@ -1,7 +1,7 @@
 // Pixel-art tree sprites (3/4 view: lumpy canopy over a short trunk), generated
 // once at startup at art resolution and packed into a device-scaled atlas.
 
-import { COLORS, SCENERY } from '../config';
+import { SCENERY, type Palette } from '../config';
 import { createRng, type Rng } from '../sim/rng';
 
 export interface Sprite {
@@ -15,12 +15,12 @@ export interface Sprite {
   h: number;
 }
 
-/** All tree sprites, indexed size * variantsPerSize + variant. */
-export function buildTreeSprites(): Sprite[] {
+/** All tree sprites in a palette, indexed size * variantsPerSize + variant. */
+export function buildTreeSprites(colors: Palette): Sprite[] {
   const rng = createRng(0x7ee5); // fixed: same art every load
   const sprites: Sprite[] = [];
   for (const R of SCENERY.treeSizes) {
-    for (let v = 0; v < SCENERY.variantsPerSize; v++) sprites.push(makeTree(R, rng));
+    for (let v = 0; v < SCENERY.variantsPerSize; v++) sprites.push(makeTree(R, rng, colors));
   }
   return sprites;
 }
@@ -89,7 +89,7 @@ export function treeReach(R: number): number {
   return R + 1 + trunkHeight(R) + shadowRadii(R).ry;
 }
 
-function makeTree(R: number, rng: Rng): Sprite {
+function makeTree(R: number, rng: Rng, colors: Palette): Sprite {
   const pad = 2;
   const trunkH = trunkHeight(R);
   const trunkW = R >= 5 ? 2 : 1;
@@ -149,22 +149,22 @@ function makeTree(R: number, rng: Rng): Sprite {
   const { rx, ry } = shadowRadii(R);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (((x - cx - 0.5) / rx) ** 2 + ((y - baseY + 0.5) / ry) ** 2 <= 1) px(COLORS.treeShadow, x, y);
+      if (((x - cx - 0.5) / rx) ** 2 + ((y - baseY + 0.5) / ry) ** 2 <= 1) px(colors.treeShadow, x, y);
     }
   }
 
   // trunk (the canopy covers its top)
   for (let y = cy + Math.round(R * 0.5); y < baseY; y++) {
-    for (let i = 0; i < trunkW; i++) px(COLORS.treeTrunk, cx + i, y);
+    for (let i = 0; i < trunkW; i++) px(colors.treeTrunk, cx + i, y);
   }
 
   // paint: silhouette outline, else the pixel's tone
-  const tones = COLORS.treeTones;
+  const tones = colors.treeTones;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       if (!inside(x, y)) continue;
       const silhouette = !inside(x + 1, y) || !inside(x - 1, y) || !inside(x, y + 1) || !inside(x, y - 1);
-      px(silhouette ? COLORS.treeOutline : tones[tone[y * w + x]], x, y);
+      px(silhouette ? colors.treeOutline : tones[tone[y * w + x]], x, y);
     }
   }
   return { image, cx: cx + 0.5, cy: cy + 0.5, w, h };

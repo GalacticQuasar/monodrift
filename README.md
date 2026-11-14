@@ -3,7 +3,7 @@
 [![Monodrift: a car drifting around a bend between pixel-art trees](public/og.png)](https://monodrift.galacticquasar.dev)
 
 A minimal top-down drift game for desktop and mobile. Stay on the road; the
-car speeds up the longer you survive. Zen mode turns off crashes and scoring.
+car speeds up the longer you survive. Zen mode turns off crashes and scoring, and there's a dark mode in Settings.
 In **Settings**, switch **Road** to *Daily* to race everyone on the same road (new one at midnight
 UTC), and pick a name to get on the **leaderboard** (today and all-time).
 

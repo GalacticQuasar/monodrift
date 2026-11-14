@@ -6,6 +6,16 @@
     <title>Monodrift</title>
     <meta name="description" content="A minimal top-down drift game. Stay on the road; the car speeds up the longer you survive." />
     <meta name="theme-color" content="#e8e8e8" />
+    <script>
+      // light/dark before first paint (same rule as src/ui/theme.ts, which takes over on load)
+      (function () {
+        var d = null;
+        try {
+          d = localStorage.getItem('monodrift-dark');
+        } catch (e) {}
+        if (d === 'on' || (d === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.dataset.theme = 'dark';
+      })();
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
