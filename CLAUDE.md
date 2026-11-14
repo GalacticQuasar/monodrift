@@ -5,7 +5,7 @@ no framework, canvas 2D. See `README.md` for the file layout.
 
 ## Commands
 
-- `npm run dev`: dev server · `npm test`: Vitest (sim + scenery, no browser)
+- `npm run dev`: dev server · `npm test`: Vitest (sim, scenery, leaderboard rules; no browser)
 - `npm run build`: typecheck + production build into `dist/` (static site)
 - `npm run typecheck`: typecheck the game (`tsc`) and the Worker (`tsc -p worker`)
 - `npm run api`: leaderboard API locally (local Worker + local D1 database on :8787;
@@ -19,7 +19,7 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - `src/render/` reads game state and never changes it. Scenery is render-only
   and also seeded.
 - `src/input/` turns events into a `SteerIntent`; `src/ui/` is DOM (HUD,
-  settings, debug panel). `src/main.ts` wires them together.
+  settings, leaderboard, install card, debug panel). `src/main.ts` wires them together.
 - All tuning numbers live in `src/config.ts`.
 - Leaderboard: `worker/` is the Cloudflare Worker for `/api/*` (D1 database,
   schema in `migrations/`). It shares pure code with the game (`sim/daily.ts`,
@@ -28,6 +28,34 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - Offline: `src/sw.js` is a service worker template; the plugin in
   `vite.config.ts` fills in the file list and version at build time. It only runs
   in production builds (test offline with `npm run build && npm run preview`).
+
+## Deployment and production data
+
+- Pushing to `main` **is** deploying: Cloudflare Workers Builds runs `npm run build`
+  and `npx wrangler deploy` (static game + `worker/`) to
+  https://monodrift.galacticquasar.dev. Commit/push only when asked.
+- Production: D1 database `monodrift` (ID in `wrangler.jsonc`), Worker secret
+  `TICKET_SECRET`. Schema changes go in a new `migrations/NNNN_*.sql`, applied with
+  `npx wrangler d1 migrations apply monodrift --remote` (needs `npx wrangler login`)
+  **before** pushing code that depends on them.
+- Never write test data to the live API/database (no test players or scores); test
+  against `npm run api`. Read-only checks on live are fine (`GET /api/leaderboard`,
+  `POST /api/tickets`, a rejected `POST /api/scores`).
+- After a deploy the service worker can serve the previous version for one load:
+  reload twice when checking the live site.
+
+## Behaviour to keep
+
+- Desktop (`lib/device.ts`: hover + fine pointer) steers with the **keyboard only**
+  (← → or A/D); the Sides/Slide mode button is hidden and a click only starts or
+  retries. Phones steer by touch (Sides or Slide mode).
+- The daily road seed comes from the UTC date (`sim/daily.ts`). Starting a run from
+  the start screen keeps the road already on screen; retries get a new one.
+- Settings and identity live in localStorage under `monodrift-*` (`lib/storage.ts`).
+- Phones show four top buttons (Leaderboard, Mode, Zen, Road), which is crowded at
+  320 px; the planned settings screen (see `todo.md`) should absorb Mode/Zen/Road.
+- `todo.md` is the user's own list (in the repo): edit it only when asked, and let
+  the user tick items off.
 
 ## Performance rules
 
@@ -53,3 +81,10 @@ placement pipeline.
 - For anything visual or input-related, check it in a real browser
   (playwright-cli is available), including a phone-sized viewport.
 - Conventional Commits for commit messages.
+- Driving in a browser test: real key presses quickly run the car off the road.
+  Instead, in `page.evaluate`, dynamic-import `/src/sim/game.ts` and
+  `/src/render/renderer.ts` (dev server) and drive with an autopilot that steers
+  toward `track.pts[trackIndex + n]` (also how `public/og.png` was made). In Node
+  tests, the same autopilot works without a browser.
+- Chrome's `beforeinstallprompt` never fires in test browsers: dispatch a fake
+  `Event('beforeinstallprompt')` with `prompt`/`userChoice` to test the install card.
