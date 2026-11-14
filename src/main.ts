@@ -4,7 +4,7 @@ import { createInput } from './input/input';
 import { DESKTOP } from './lib/device';
 import { KEYS, storage } from './lib/storage';
 import { startLoop } from './loop';
-import { createRenderer } from './render/renderer';
+import { ALL_LAYERS, createRenderer } from './render/renderer';
 import { api } from './lib/api';
 import { dailySeed, utcDay } from './sim/daily';
 import { createGame, step } from './sim/game';
@@ -13,14 +13,17 @@ import { createDebug, debugLayers } from './ui/debug';
 import { createHud } from './ui/hud';
 import { createInstallPrompt } from './ui/install';
 import { createLeaderboard } from './ui/leaderboard';
-import { createSettings } from './ui/settings';
+import { createSettings, sensitivityFactor } from './ui/settings';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 
 const canvas = $<HTMLCanvasElement>('#c');
-const renderer = createRenderer(canvas, debugLayers());
+// layers drawn; the Trees setting adds/removes 'trees' unless ?render=… chose them
+const fixedLayers = debugLayers();
+const layers = fixedLayers ?? new Set(ALL_LAYERS);
+const renderer = createRenderer(canvas, layers);
 const hud = createHud($('#score'), $('#msg'));
 const debug = createDebug();
 autoHideCursor();
@@ -45,29 +48,36 @@ function showReady() {
   install.maybeShow();
 }
 
-const settings = createSettings($('#mode'), $('#zen'), $('#road'), changed => {
+const settings = createSettings($('#settings-btn'), $('#settings'), changed => {
   if (changed === 'zen' || changed === 'daily') {
     // ends the current run: no carrying a zen run into a scored one (zen runs never
     // end on their own, so this is the way out), and a new road needs a new run
     showReady();
-  } else {
+  } else if (changed === 'mode') {
     input.clear();
     if (game.phase === 'ready') hud.showStart(settings.mode, settings.zen, settings.daily);
+  } else if (changed === 'trees') {
+    applyTrees();
   }
 });
+
+function applyTrees() {
+  if (fixedLayers) return;
+  if (settings.trees) layers.add('trees');
+  else layers.delete('trees');
+}
+applyTrees();
 
 /** Today's road (same for everyone, by UTC day) or a random one. */
 const roadSeed = () => (settings.daily ? dailySeed(utcDay(Date.now())) : randomSeed());
 let game = createGame(roadSeed());
 
-// desktop steers with the keyboard only, so the touch steering mode doesn't apply
-$('#mode').hidden = DESKTOP;
-
 const input = createInput(canvas, {
   mode: () => settings.mode,
+  sensitivity: () => sensitivityFactor(settings.sensitivity),
   pointerSteer: !DESKTOP,
   onAction: () => {
-    if (game.phase === 'run' || leaderboard.open) return false;
+    if (game.phase === 'run' || leaderboard.open || settings.open) return false;
     if (performance.now() < retryAllowedAt) return true; // swallow the tap
     // from the start screen, drive the road already on screen; a retry gets a new one
     game = createGame(game.phase === 'ready' ? game.seed : roadSeed(), 'run');

@@ -90,6 +90,11 @@ export const UI = {
 export const INPUT = {
   /** Slide mode: px of finger travel = 90° of heading change. */
   dragPxPer90: 120,
+  /**
+   * Steering multiplier per sensitivity level (Settings), applied to the keyboard/Sides
+   * turn rate and the Slide drag distance. The middle level is the default.
+   */
+  sensitivity: [0.7, 0.85, 1, 1.15, 1.3],
 } as const;
 
 export const VIEW = {

@@ -47,13 +47,18 @@ no framework, canvas 2D. See `README.md` for the file layout.
 ## Behaviour to keep
 
 - Desktop (`lib/device.ts`: hover + fine pointer) steers with the **keyboard only**
-  (← → or A/D); the Sides/Slide mode button is hidden and a click only starts or
-  retries. Phones steer by touch (Sides or Slide mode).
+  (← → or A/D); the Steering (Sides/Slide) row is left out of Settings and a click
+  only starts or retries. Phones steer by touch (Sides or Slide mode).
 - The daily road seed comes from the UTC date (`sim/daily.ts`). Starting a run from
   the start screen keeps the road already on screen; retries get a new one.
 - Settings and identity live in localStorage under `monodrift-*` (`lib/storage.ts`).
-- Phones show four top buttons (Leaderboard, Mode, Zen, Road), which is crowded at
-  320 px; the planned settings screen (see `todo.md`) should absorb Mode/Zen/Road.
+- Two top buttons only: Leaderboard and Settings. Road, Zen, Steering, Sensitivity
+  and Trees live in the Settings panel (`ui/settings.ts`); changing Road or Zen
+  starts over. Sensitivity scales steering in `input/`, never in the sim.
+- UI style: pixel/retro to match the art. Silkscreen (self-hosted in `src/fonts/`)
+  for buttons, titles and the score; system sans for body text. Buttons and panels
+  use the notched pixel frame (`--frame` in `style.css`), square corners and hard
+  shadows. Everything must fit a 320 px wide phone.
 - `todo.md` is the user's own list (in the repo): edit it only when asked, and let
   the user tick items off.
 

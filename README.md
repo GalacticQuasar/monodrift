@@ -4,7 +4,7 @@
 
 A minimal top-down drift game for desktop and mobile. Stay on the road; the
 car speeds up the longer you survive. Zen mode turns off crashes and scoring.
-Switch **Road** to *Daily* to race everyone on the same road (new one at midnight
+In **Settings**, switch **Road** to *Daily* to race everyone on the same road (new one at midnight
 UTC), and pick a name to get on the **leaderboard** (today and all-time).
 
 **Play it:** [monodrift.galacticquasar.dev](https://monodrift.galacticquasar.dev). After the first

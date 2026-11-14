@@ -14,6 +14,10 @@ export const KEYS = {
   player: 'monodrift-player',
   /** 'skipped' once the name prompt after a run was skipped. */
   namePrompt: 'monodrift-name-prompt',
+  /** Steering sensitivity level, '1'..'5'. */
+  sensitivity: 'monodrift-sensitivity',
+  /** 'off' to hide the trees. */
+  trees: 'monodrift-trees',
 } as const;
 
 export const storage = {

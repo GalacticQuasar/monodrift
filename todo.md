@@ -2,10 +2,14 @@ Fixes:
 - Fix jitters - but only seem to be present on windows laptops, mac laptop runs really smoothly
 
 Features:
+- Dark Mode
 - Settings modal to change sensitivity, maybe turn on/off trees, etc.
   - adjust speed?
 - Color themes
 - Maps (like City mode, etc.)
+- Track Mode (set track for a day, whoever gets lowest time to finish wins)
+- Curbs around outer edge of turns- if you drift on them you get a speed boost (which helps accel into the next straight)
+  - Could be styled white&grey alternating
 
 Art:
 - Make cottages / campfires

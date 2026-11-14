@@ -41,6 +41,8 @@ export function createInput(
   target: HTMLElement,
   opts: {
     mode: () => SteerMode;
+    /** Steering multiplier (1 = normal). */
+    sensitivity: () => number;
     /** Called on tap / Space / Enter. Return true if it was consumed (e.g. started a run). */
     onAction: () => boolean;
     /** Whether holding/dragging a pointer steers (touch); otherwise it only starts runs. */
@@ -91,7 +93,7 @@ export function createInput(
       if (last) {
         if (opts.mode() === 'drag') {
           if (!keyL && !keyR) {
-            const offset = ((last.x - last.startX) / INPUT.dragPxPer90) * (Math.PI / 2);
+            const offset = ((last.x - last.startX) / INPUT.dragPxPer90) * (Math.PI / 2) * opts.sensitivity();
             return { kind: 'aim', offset, gesture: last.gesture };
           }
         } else {
@@ -100,7 +102,7 @@ export function createInput(
       }
       if (keyL) rate = -1;
       if (keyR) rate = 1;
-      return { kind: 'rate', rate };
+      return { kind: 'rate', rate: rate * opts.sensitivity() };
     },
     clear() {
       pointers.clear();
