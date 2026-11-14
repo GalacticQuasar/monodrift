@@ -54,11 +54,11 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - Settings and identity live in localStorage under `monodrift-*` (`lib/storage.ts`).
 - Two top buttons only: Leaderboard and Settings (icons on phones). Road, Zen, Speed,
   Steering, Sensitivity, Trees and Dark live in the Settings panel (`ui/settings.ts`); changing Road, Zen
-  or Speed starts over.
+  or Speed starts over. Opening Settings mid-run pauses the run; after closing it, the next
+  tap/key resumes. Sensitivity scales steering in `input/`, never in the sim.
 - Speed (Slow/Normal/Fast, `SPEED` in `config.ts`) scales game time via the sim's
   `speed` rule. Only Normal runs are ranked (no ticket otherwise; a note under the
-  picker says so), and each speed keeps its own local best. Opening Settings mid-run pauses the run; after closing it, the next
-  tap/key resumes. Sensitivity scales steering in `input/`, never in the sim.
+  picker says so), and each speed keeps its own local best.
 - Dark mode: the Dark setting (Off by default / On / Auto follows the device) sets
   `data-theme` on `<html>` (`ui/theme.ts`; an inline script in `index.html` does it
   before first paint). The canvas uses `COLORS.light`/`COLORS.dark`, the DOM uses the
