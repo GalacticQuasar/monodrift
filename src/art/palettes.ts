@@ -19,7 +19,7 @@ export interface Tone {
 const scenery = (char: string, name: string, pick: (p: typeof COLORS.light) => string): Tone => ({ char, name, light: pick(COLORS.light), dark: pick(COLORS.dark) });
 
 export const PALETTES = {
-  /** Trees, and future scenery (cottages, campfires…): the canvas tones in COLORS. */
+  /** Scenery (campfires, future cottages…): the canvas tones in COLORS. */
   scenery: [
     scenery('o', 'outline', p => p.treeOutline),
     scenery('t', 'trunk', p => p.treeTrunk),
@@ -28,6 +28,8 @@ export const PALETTES = {
     scenery('3', 'tone 3', p => p.treeTones[2]),
     scenery('4', 'tone 4 (light)', p => p.treeTones[3]),
     scenery('s', 'shadow', p => p.treeShadow),
+    scenery('f', 'flame', p => p.flame),
+    scenery('y', 'flame core', p => p.flameCore),
   ],
   /** The copper key easter egg (ui/egg.ts), drawn in the DOM with the --copper-* tokens. */
   copper: [

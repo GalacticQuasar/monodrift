@@ -64,3 +64,23 @@ export function artRuns(art: PixelArt): Run[] {
   });
   return runs;
 }
+
+/** The anchor point in art px from the top-left: the anchor pixel's centre, else the image centre. */
+export function artAnchor(art: PixelArt): { x: number; y: number } {
+  return art.anchor ? { x: art.anchor[0] + 0.5, y: art.anchor[1] + 0.5 } : { x: art.pixels[0].length / 2, y: art.pixels.length / 2 };
+}
+
+/**
+ * Farthest painted point from the anchor, in art px (pixel corners count). Scenery
+ * uses it for road clearance and view culling, so it follows the art when it's edited.
+ */
+export function artReach(art: PixelArt): number {
+  const a = artAnchor(art);
+  let reach = 0;
+  for (const { x, y, w } of artRuns(art)) {
+    const dx = Math.max(Math.abs(x - a.x), Math.abs(x + w - a.x));
+    const dy = Math.max(Math.abs(y - a.y), Math.abs(y + 1 - a.y));
+    reach = Math.max(reach, Math.hypot(dx, dy));
+  }
+  return reach;
+}

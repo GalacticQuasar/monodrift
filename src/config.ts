@@ -150,7 +150,33 @@ export const SCENERY = {
   maxCachedCells: 800,
 } as const;
 
+/** Campfires (src/art/campfire-*.json): in small clearings in the forest, beside the road. Render-only. */
+export const CAMPFIRE = {
+  /** Only in a forest cell (tree density 0..1 at least this) with at least... */
+  forestDensity: 0.3,
+  /** ...this many of its 8 neighbour cells as dense, so it's surrounded by trees. */
+  minForestNeighbours: 6,
+  /** Trees keep their canopies this far (px) from a campfire: its clearing. */
+  clearingRadius: 40,
+  /** Trees planted around the clearing (fewer where the road is in the way). */
+  ringTrees: 9,
+  /** Chance such a cell gets one, if it has a spot near the road (~1 per 4000 px of road). */
+  chance: 0.05,
+  /** Extra distance (px) a campfire keeps from the road, beyond the usual margin trees keep... */
+  roadMinGap: 45,
+  /** ...and how much further out than that it may sit (px). */
+  roadGap: 80,
+  /** Spots tried per cell. */
+  tries: 6,
+  /** Animation: each frame of the flames lasts this long. */
+  frameMs: 160,
+  /** Dark mode glow: radius in art px, and the number of flat light bands. */
+  glowRadius: 20,
+  glowBands: 3,
+} as const;
+
 export interface Palette {
+  readonly theme: 'light' | 'dark';
   readonly ground: string;
   readonly road: string;
   readonly car: string;
@@ -163,11 +189,17 @@ export interface Palette {
   readonly treeOutline: string;
   readonly treeTrunk: string;
   readonly treeTones: readonly [string, string, string, string];
+  /** Campfire flames: outer, core. */
+  readonly flame: string;
+  readonly flameCore: string;
+  /** Campfire light on the ground, one band's worth (bands stack); '' for none. */
+  readonly glow: string;
 }
 
 /** Canvas colours per theme (the DOM UI's colours are CSS tokens in style.css). */
 export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
   light: {
+    theme: 'light',
     ground: '#e8e8e8',
     road: '#fff',
     car: '#111',
@@ -178,9 +210,13 @@ export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
     treeOutline: '#4d4d4d',
     treeTrunk: '#5e5e5e',
     treeTones: ['#7a7a7a', '#939393', '#acacac', '#c6c6c6'],
+    flame: '#dcdcdc',
+    flameCore: '#fff',
+    glow: '', // daylight: fires don't light the ground
   },
   // dark: night road; the car is the lightest thing on screen instead of the darkest
   dark: {
+    theme: 'dark',
     ground: '#1b1b1b',
     road: '#383838',
     car: '#f0f0f0',
@@ -191,5 +227,9 @@ export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
     treeOutline: '#0f0f0f',
     treeTrunk: '#2a2a2a',
     treeTones: ['#2e2e2e', '#3a3a3a', '#474747', '#565656'],
+    // fire is a light source: brighter than the rest of the night scenery (the car stays brightest)
+    flame: '#8c8c8c',
+    flameCore: '#d4d4d4',
+    glow: 'rgba(255,255,255,0.05)',
   },
 };

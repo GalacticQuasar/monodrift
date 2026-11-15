@@ -1,0 +1,18 @@
+{
+  "palette": "scenery",
+  "anchor": [7, 8],
+  "pixels": [
+    "....o..........",
+    "...ofo..o......",
+    "...ofo.ofo.....",
+    "...ofoofyfo....",
+    "....offyyfo....",
+    "....ofyyyfo....",
+    "..oo4fyyyf4oo..",
+    ".o443tfyft344o.",
+    "o432tt1y1tt234o",
+    ".o42424242424o.",
+    "..ooooooooooo..",
+    "..sssssssssss.."
+  ]
+}

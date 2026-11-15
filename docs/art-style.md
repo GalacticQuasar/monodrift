@@ -1,6 +1,6 @@
 # Art style guide
 
-How visual assets (trees today; houses, rocks, signs, … later) are designed and
+How visual assets (trees and campfires today; houses, rocks, signs, … later) are designed and
 wired into Monodrift. Read this before adding or changing any sprite.
 
 ## The look
@@ -10,7 +10,7 @@ Scenery should add texture without competing with the road or the car.
 
 | Rule | Value / where |
 | --- | --- |
-| Colour | **Grayscale only.** Use the tones in `COLORS` (`src/config.ts`); add new greys there rather than inline. Every colour exists twice, in `COLORS.light` and `COLORS.dark` (dark mode), and sprites are generated from the active palette, so give each new tone both values. Light: nothing darker than `treeOutline` (`#4d4d4d`), so the car (`#111`) stays the darkest thing on screen. Dark: the reverse; nothing lighter than the brightest tree tone (`#565656`), so the white car stays the lightest. |
+| Colour | **Grayscale only.** Use the tones in `COLORS` (`src/config.ts`); add new greys there rather than inline. Every colour exists twice, in `COLORS.light` and `COLORS.dark` (dark mode), and sprites are generated from the active palette, so give each new tone both values. Light: nothing darker than `treeOutline` (`#4d4d4d`), so the car (`#111`) stays the darkest thing on screen. Dark: the reverse; nothing lighter than the brightest tree tone (`#565656`), so the white car stays the lightest. **Exception: fire** is a light source, so flames (`flame`, `flameCore`) are brighter at night, but still below the car (`#f0f0f0`). |
 | Projection | **3/4 view**: objects are seen from above and slightly in front, so they show a top and a front face (trees: canopy over a visible trunk). Pure top-down blobs read as rocks. |
 | Light | From the **top-left**. Lit faces/caps toward the upper-left, darkest band toward the lower-right. |
 | Outline | **1 px dark outline around the silhouette only.** No internal outlines between parts. |
@@ -41,9 +41,11 @@ These were all tried for the trees and rejected:
 Files: `src/render/sprites.ts` (art), `src/render/scenery.ts` (placement),
 `src/render/renderer.ts` (drawing).
 
-1. **Generate** each variant once at startup at art resolution into a small
-   canvas (`makeTree`), with its baked shadow. Record the anchor point
-   (`cx`, `cy`: art px from the top-left to the object's centre) and size.
+1. **Generate** each sprite once per palette at art resolution into a small
+   canvas: procedurally (`makeTree`) or from a `src/art` file (`spriteFromArt`),
+   with its baked shadow. Record the anchor point (`cx`, `cy`: art px from the
+   top-left to the object's anchor) and size. `buildSprites` lists them all;
+   `SPRITES` says where each kind starts in that list.
 2. **Pack** all sprites into one atlas pre-scaled to device pixels
    (`buildAtlas`, rebuilt only if the device scale changes), then swapped to an
    `ImageBitmap`. Drawing is a 1:1 copy from a single texture. Add new asset
@@ -51,10 +53,10 @@ Files: `src/render/sprites.ts` (art), `src/render/scenery.ts` (placement),
    (that was the main cause of lag before).
 3. **Place** objects on the seeded world grid (`generateCell`): deterministic
    per seed, so the same road always gets the same scenery.
-4. **Keep them off the road** using the object's real extent: export a pure
-   "reach" function next to the art (like `treeReach(R)`: canopy + trunk +
-   shadow, in art px) and use it for both road clearance and view padding.
-   Never hand-tune a separate clearance number.
+4. **Keep them off the road** using the object's real extent: a pure "reach"
+   (like `treeReach(R)`: canopy + trunk + shadow; for art files `artReach(art)`,
+   the farthest painted pixel from the anchor), used for both road clearance and
+   view padding. Never hand-tune a separate clearance number.
 5. **Draw back to front by y** (3/4-view objects lower on screen overlap those
    above). `visible()` returns a nearly-sorted list; keep per-cell lists sorted.
 6. **Draw with whole numbers only**, in device-pixel space
@@ -76,7 +78,8 @@ campfires, the copper key) lives in `src/art/<name>.json`:
 
 - Each row is a string, one character per pixel; `.` is transparent. The
   characters are the palette's tones (`src/art/palettes.ts`): `scenery` is
-  `o` outline, `t` trunk, `1`–`4` dark → light, `s` shadow, all from `COLORS`
+  `o` outline, `t` trunk, `1`–`4` dark → light, `s` shadow, `f`/`y` flame and
+  flame core, all from `COLORS`
   (light and dark values). Add a palette there for anything new.
 - `anchor` (optional) is the pixel to place the object by, usually its base centre.
 - `artProblems()` / `artRuns()` in `src/lib/pixel-art.ts` validate an asset and
@@ -88,21 +91,39 @@ campfires, the copper key) lives in `src/art/<name>.json`:
   I pick (or Alt+click), A anchor, M mirror, 0–9 tones, arrows shift, Ctrl+Z/S.
   It's served by the dev server only and isn't part of the build.
 
+## Campfires (the worked example)
+
+- Art: `src/art/campfire-1..3.json`, the animation frames (same size and anchor,
+  only the flames change).
+- Placement (`generateCampfire` in `scenery.ts`, tuning in `CAMPFIRE` in
+  `config.ts`): only deep in a forest (the cell and most of its neighbours dense),
+  at most one per neighbourhood, near the road but clear of it. Trees keep out
+  of a small clearing around it (`clearingRadius`, also in neighbouring cells:
+  each cell's fire is worked out once and remembered), and a ring of trees is
+  planted round the clearing, so the fire sits in a grove by the road rather
+  than out in the open.
+- **Animation:** a `Prop` has `sprite` (first frame), `frames` and a random
+  `phase`; the renderer picks `sprite + (frame + phase) % frames` from the clock
+  it's given, so neighbours don't flicker in sync. Nothing is allocated per frame.
+- **Night glow:** `makeGlow` draws flat, stacked bands of `COLORS.dark.glow`
+  (empty in light mode), two sizes alternating with the flames. The renderer
+  draws glows on the ground and road, under the car, before the scenery layer.
+- The Trees setting (and `?render=-trees`) hides all scenery, campfires included.
+
 ## Recipe: adding a new asset type (e.g. houses)
 
 1. Add its tones to `COLORS` and its tuning (sizes, variants, density,
    distance from road) to config.
 2. Draw the variants in the pixel editor (`src/art/house-*.json`, `scenery`
-   palette, shadow baked in with `s`, anchor at the base centre). In
-   `sprites.ts`, turn each into a sprite (paint `artRuns()` into a canvas with
-   the active palette's tones) and add a pure `houseReach()` from the art's size
-   and anchor. Hand-designed shapes suit buildings better than random lobes;
-   keep the outline/light/flat-band rules.
-3. Pack the new sprites into the shared atlas (extend `buildTreeSprites` /
-   `buildAtlas` to take all sprite kinds; give each object a sprite index).
-4. In `scenery.ts`, add placement rules: houses might sit at a set distance
-   beside the road, face it, and avoid trees. Use the reach function for
-   clearance. Keep everything seeded from the run's seed.
+   palette, shadow baked in with `s`, anchor at the base centre). Hand-designed
+   shapes suit buildings better than random lobes; keep the outline/light/
+   flat-band rules.
+3. In `sprites.ts`, import the files, push `spriteFromArt(art, colors)` for each
+   in `buildSprites`, add their start index to `SPRITES`, and export their reach
+   (`artReach`). Include it in `VIEW_PAD` in `scenery.ts`.
+4. In `scenery.ts`, add placement rules (like `generateCampfire`): houses might
+   sit at a set distance beside the road and avoid trees (`spacedOut`). Use the
+   reach for clearance. Keep everything seeded from the run's seed.
 5. Test: extend `tests/scenery.test.ts` (never on the road, same seed → same
    layout).
 
@@ -112,14 +133,14 @@ campfires, the copper key) lives in `src/art/<name>.json`:
   console to view every sprite at 8× (reload the page to get the game back):
 
   ```js
-  const { buildTreeSprites } = await import('/src/render/sprites.ts');
+  const { buildSprites } = await import('/src/render/sprites.ts');
   const { COLORS } = await import('/src/config.ts');
-  const sprites = buildTreeSprites(COLORS.light); // or COLORS.dark
+  const sprites = buildSprites(COLORS.light); // or COLORS.dark
   const c = Object.assign(document.createElement('canvas'), { width: 1280, height: 720 });
   Object.assign(c.style, { position: 'fixed', inset: 0, zIndex: 99, background: '#e8e8e8' });
   document.body.append(c);
   const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
-  sprites.forEach((s, i) => ctx.drawImage(s.image, 20 + (i % 3) * 160, 10 + Math.floor(i / 3) * 140, s.w * 8, s.h * 8));
+  sprites.forEach((s, i) => ctx.drawImage(s.image, 20 + (i % 5) * 160, 10 + Math.floor(i / 5) * 140, s.w * 8, s.h * 8));
   ```
 
 - **In game**: look at it on the start screen and while driving, at phone

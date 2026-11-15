@@ -1,13 +1,42 @@
-// Pixel-art tree sprites (3/4 view: lumpy canopy over a short trunk), generated
-// once at startup at art resolution and packed into a device-scaled atlas.
+// Scenery sprites: procedural pixel-art trees (3/4 view: lumpy canopy over a short
+// trunk) and hand-drawn art from src/art (campfires), made once per palette at art
+// resolution and packed into a device-scaled atlas.
 
-import { SCENERY, type Palette } from '../config';
+import { toneMap } from '../art/palettes';
+import campfire1 from '../art/campfire-1.json';
+import campfire2 from '../art/campfire-2.json';
+import campfire3 from '../art/campfire-3.json';
+import { CAMPFIRE, SCENERY, type Palette } from '../config';
+import { artAnchor, artReach, artRuns, type PixelArt } from '../lib/pixel-art';
 import { createRng, type Rng } from '../sim/rng';
 
+/** Campfire animation frames, in order. */
+const CAMPFIRE_ART = [campfire1, campfire2, campfire3] as PixelArt[];
+const TREE_COUNT = SCENERY.treeSizes.length * SCENERY.variantsPerSize;
+/** Glow sizes alternated with the flame frames (a flicker), dark mode only. */
+const GLOW_SIZES = [CAMPFIRE.glowRadius, CAMPFIRE.glowRadius - 1];
+
+/**
+ * Where things are in the sprite list from buildSprites: trees first
+ * (size * variantsPerSize + variant), then the campfire frames, then its glows.
+ * Pure numbers: safe to import in tests.
+ */
+export const SPRITES = {
+  campfire: TREE_COUNT,
+  campfireFrames: CAMPFIRE_ART.length,
+  glow: TREE_COUNT + CAMPFIRE_ART.length,
+  glowFrames: GLOW_SIZES.length,
+} as const;
+
+/** Farthest painted pixel of any campfire frame from its anchor, in art px. */
+export const campfireReach = Math.max(...CAMPFIRE_ART.map(artReach));
+/** How far the glow reaches from the campfire's anchor, in art px. */
+export const glowReach = CAMPFIRE.glowRadius + 1;
+
 export interface Sprite {
-  /** Tree with its ground shadow, at art resolution. */
+  /** The object with its ground shadow, at art resolution. */
   image: HTMLCanvasElement;
-  /** Art pixels from the sprite's top-left corner to the canopy centre. */
+  /** Art pixels from the sprite's top-left corner to its anchor (canopy centre, base of a campfire). */
   cx: number;
   cy: number;
   /** Size in art pixels. */
@@ -15,14 +44,52 @@ export interface Sprite {
   h: number;
 }
 
-/** All tree sprites in a palette, indexed size * variantsPerSize + variant. */
-export function buildTreeSprites(colors: Palette): Sprite[] {
+/** Every scenery sprite in a palette, laid out as described at SPRITES. */
+export function buildSprites(colors: Palette): Sprite[] {
   const rng = createRng(0x7ee5); // fixed: same art every load
   const sprites: Sprite[] = [];
   for (const R of SCENERY.treeSizes) {
     for (let v = 0; v < SCENERY.variantsPerSize; v++) sprites.push(makeTree(R, rng, colors));
   }
+  for (const art of CAMPFIRE_ART) sprites.push(spriteFromArt(art, colors));
+  for (const r of GLOW_SIZES) sprites.push(makeGlow(r, colors));
   return sprites;
+}
+
+/** A hand-drawn asset (src/art) painted in the palette's tones, anchored at its anchor pixel. */
+export function spriteFromArt(art: PixelArt, colors: Palette): Sprite {
+  const w = art.pixels[0].length, h = art.pixels.length;
+  const image = canvas(w, h);
+  const ctx = image.getContext('2d')!;
+  const tones = toneMap(art.palette);
+  for (const run of artRuns(art)) {
+    ctx.fillStyle = tones[run.c][colors.theme];
+    ctx.fillRect(run.x, run.y, run.w, 1);
+  }
+  const a = artAnchor(art);
+  return { image, cx: a.x, cy: a.y, w, h };
+}
+
+/**
+ * Firelight on the ground: flat bands of light, brighter toward the middle, squashed
+ * for the 3/4 view. Empty (1 px) in a palette without a glow colour (daylight).
+ */
+function makeGlow(R: number, colors: Palette): Sprite {
+  if (!colors.glow) return { image: canvas(1, 1), cx: 0.5, cy: 0.5, w: 1, h: 1 };
+  const ry = Math.round(R * 0.6);
+  const w = 2 * R + 1, h = 2 * ry + 1;
+  const image = canvas(w, h);
+  const ctx = image.getContext('2d')!;
+  ctx.fillStyle = colors.glow;
+  for (let band = 0; band < CAMPFIRE.glowBands; band++) {
+    const k = 1 - band / CAMPFIRE.glowBands; // outer band first, each one stacks on the last
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (((x - R) / (R * k + 0.5)) ** 2 + ((y - ry) / (ry * k + 0.5)) ** 2 <= 1) ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+  return { image, cx: R + 0.5, cy: ry + 0.5, w, h };
 }
 
 export interface AtlasRect {

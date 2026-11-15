@@ -81,10 +81,10 @@ src/
     rng.ts         seeded RNG (mulberry32)
   input/           pointer + keyboard → SteerIntent
   render/          canvas drawing (reads state, never writes it)
-    renderer.ts    draws the layers: background, road, skids, car, trees
+    renderer.ts    draws the layers: background, road, skids, firelight, car, scenery
     camera.ts      follows the car
-    scenery.ts     seeded tree placement on a world grid, kept off the road
-    sprites.ts     pixel-art tree sprites + the device-scaled atlas
+    scenery.ts     seeded trees and campfires on a world grid, kept off the road
+    sprites.ts     pixel-art sprites (procedural trees, src/art files) + the device-scaled atlas
   ui/              DOM: HUD, settings buttons, cursor auto-hide, install card,
                    leaderboard panel + name card, ?debug panel
   art/             hand-drawn pixel art (*.json, one string per row) + palettes.ts

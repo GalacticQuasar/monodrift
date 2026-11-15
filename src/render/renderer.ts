@@ -1,18 +1,21 @@
 // Draws a GameState. Read-only: never modifies the state.
 
-import { CAR, SCENERY, SKIDS, TRACK, VIEW, type Palette } from '../config';
+import { CAMPFIRE, CAR, SCENERY, SKIDS, TRACK, VIEW, type Palette } from '../config';
 import type { GameState } from '../sim/game';
 import { followCar } from './camera';
-import { createScenery, type Scenery, type Tree } from './scenery';
-import { buildAtlas, buildTreeSprites, type Atlas } from './sprites';
+import { createScenery, type Prop, type Scenery } from './scenery';
+import { SPRITES, buildAtlas, buildSprites, type Atlas } from './sprites';
 
-/** Drawing layers; debug mode can switch them off to isolate rendering problems. */
+/** Drawing layers; debug mode can switch them off to isolate rendering problems. 'trees' is all scenery (campfires too). */
 export type Layer = 'bg' | 'road' | 'skids' | 'car' | 'trees';
 export const ALL_LAYERS: readonly Layer[] = ['bg', 'road', 'skids', 'car', 'trees'];
 
 export interface Renderer {
-  /** `alpha` (0..1) blends between the previous and current sim step. */
-  draw(g: GameState, alpha: number): void;
+  /**
+   * `alpha` (0..1) blends between the previous and current sim step; `now` (ms, any
+   * clock) drives scenery animation (campfire flames).
+   */
+  draw(g: GameState, alpha: number, now?: number): void;
   /** For debugging (updated in place): trees drawn last frame, scenery running totals. */
   readonly stats: Scenery['stats'];
   /** Switch colours (theme change): regenerates the tree sprites, so not per frame. */
@@ -28,7 +31,7 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
   // opaque: we paint every pixel each frame, so the browser needn't blend with the page
   const ctx = canvas.getContext('2d', { alpha: false })!;
   const scenery = createScenery();
-  let sprites = buildTreeSprites(colors);
+  let sprites = buildSprites(colors);
   let alphas = skidAlphas(colors);
   let atlas: Atlas | null = null;
   let W = 0, H = 0, dpr = 1;
@@ -52,10 +55,10 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
       if (next === colors) return;
       colors = next;
       alphas = skidAlphas(colors);
-      sprites = buildTreeSprites(colors);
+      sprites = buildSprites(colors);
       if (atlas) atlas = buildAtlas(sprites, atlas.scale);
     },
-    draw(g, alpha) {
+    draw(g, alpha, now = 0) {
       const { car } = g;
       const cx = lerp(car.prevX, car.x, alpha);
       const cy = lerp(car.prevY, car.y, alpha);
@@ -69,11 +72,15 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
       const cam = followCar(cx, cy, W, H);
       ctx.translate(cam.x, cam.y);
 
+      const props = layers.has('trees') ? scenery.visible(g, -cam.x, -cam.y, W - cam.x, H - cam.y) : null;
+      const frame = Math.floor(now / CAMPFIRE.frameMs);
       if (layers.has('road')) drawRoad(g);
       if (layers.has('skids')) drawSkids(g);
+      // firelight on the ground and road, under the car (dark mode only)
+      if (props && colors.glow) drawProps(props, cam, frame, true);
       if (layers.has('car')) drawCar(cx, cy, ch);
-      // trees last, so an off-road car (zen) drives under them
-      if (layers.has('trees')) drawTrees(scenery.visible(g, -cam.x, -cam.y, W - cam.x, H - cam.y), cam);
+      // scenery last, so an off-road car (zen) drives under trees
+      if (props) drawProps(props, cam, frame, false);
     },
   };
 
@@ -124,19 +131,30 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
   }
 
   /**
-   * Draw tree sprites from the atlas as 1:1 copies in device-pixel space. Every
-   * argument is a whole number, so the calls are exact and create no garbage.
+   * Draw prop sprites (or, with `glows`, their firelight) from the atlas as 1:1 copies
+   * in device-pixel space. Every argument is a whole number, so the calls are exact
+   * and create no garbage. `frame` counts animation frames since the clock's start.
    */
-  function drawTrees(trees: Tree[], cam: { x: number; y: number }) {
+  function drawProps(props: Prop[], cam: { x: number; y: number }, frame: number, glows: boolean) {
     const { image, rects, scale } = atlas!;
     const k = scale / dpr; // CSS px per art pixel
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.imageSmoothingEnabled = false; // resets whenever the canvas is resized
-    for (let i = 0; i < trees.length; i++) {
-      const t = trees[i], s = sprites[t.sprite], r = rects[t.sprite];
-      const x = Math.round((t.x - s.cx * k + cam.x) * dpr);
-      const y = Math.round((t.y - s.cy * k + cam.y) * dpr);
+    for (let i = 0; i < props.length; i++) {
+      const p = props[i];
+      let index: number;
+      if (glows) {
+        if (p.glow < 0) continue;
+        index = p.glow + ((frame + p.phase) % SPRITES.glowFrames); // flickers with the flames
+      } else {
+        index = p.frames > 1 ? p.sprite + ((frame + p.phase) % p.frames) : p.sprite;
+      }
+      const s = sprites[index], r = rects[index];
+      const x = Math.round((p.x - s.cx * k + cam.x) * dpr);
+      const y = Math.round((p.y - s.cy * k + cam.y) * dpr);
       ctx.drawImage(image, r.x, r.y, r.w, r.h, x, y, r.w, r.h);
     }
+    // back to world space for the car, drawn after the glows
+    if (glows) ctx.setTransform(dpr, 0, 0, dpr, cam.x * dpr, cam.y * dpr);
   }
 }

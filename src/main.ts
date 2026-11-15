@@ -177,7 +177,7 @@ startLoop({
   },
   render(alpha, now) {
     const t0 = debug ? performance.now() : 0;
-    renderer.draw(game, paused ? 1 : alpha); // paused: no stepping, so draw the last state exactly
+    renderer.draw(game, paused ? 1 : alpha, now); // paused: no stepping, so draw the last state exactly
     hud.setScore(game.phase === 'ready' || settings.zen ? '' : String(game.score));
     if (!debug) return;
     counters.drawMs = performance.now() - t0;
