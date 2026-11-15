@@ -42,7 +42,7 @@ export const CAR = {
   /** Heading change (rad/s) at full steer in rate mode. */
   steerRate: 3.1,
   /** How fast velocity aligns with heading. Lower = more slide. */
-  grip: 2.4,
+  grip: 2.2,
   /** Aim mode: how quickly heading swings toward the target... */
   aimEase: 14,
   /** ...capped at this rate (rad/s). */
