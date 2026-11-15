@@ -5,6 +5,21 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-15
+
+- Covers: `01d6928` to `80293d5` (Speed setting, campfires, What's new page)
+- Last commit: `80293d5`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Campfires**: small fires now burn in clearings in the forest beside the road. The flames flicker, and in dark mode they light up the ground around them
+- **Speed setting**: pick Slow, Normal or Fast in Settings. Only Normal runs go on the leaderboard, and each speed keeps its own best score
+
+**Polish**
+- **What's new**: these notes now live at /updates, with a link in Settings. When the game updates, a card tells you once
+
 ## 2026-11-14
 
 - Covers: `83924b4` to `2c0f0e7` (Settings, retro look, phone icons, dark mode, pause)
