@@ -2,22 +2,12 @@
 // and a copper key bursts onto the game-over screen. The key is the one splash of
 // colour in the game; its tones are the --copper-* tokens in style.css.
 
-/**
- * Pixel-art key, 3/4 view, light from the top-left (docs/art-style.md).
- * o outline, h highlight, m mid, d shadow.
- */
-const KEY = [
-  '..ooooo.................',
-  '.ohhhhmo................',
-  'ohhmmmmdoooooooooooooo..',
-  'ohm...mdhhhhhhhhhhhhhhho',
-  'ohm...mdmmmmmmmmmmmmmmmo',
-  'ohm...mddddddddddddddddo',
-  'ommmmmddoooooooddoodddo.',
-  '.odddddo.....oddoodddo..',
-  '..ooooo.......oo..ooo...',
-];
-const TONE: Record<string, string> = { o: 'outline', h: 'hi', m: 'mid', d: 'lo' };
+import { toneMap } from '../art/palettes';
+import keyArt from '../art/copper-key.json';
+import { artRuns, type PixelArt } from '../lib/pixel-art';
+
+/** Pixel-art key, 3/4 view, light from the top-left. Edit it in the pixel editor (/tools/pixel-editor/). */
+const KEY = keyArt as PixelArt;
 
 const TITLE = 'Copper Key';
 const SUBTITLE = 'the only way forward was backward';
@@ -27,26 +17,19 @@ const SPARKS = 24;
 function keySvg(): SVGSVGElement {
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${KEY[0].length} ${KEY.length}`);
+  svg.setAttribute('viewBox', `0 0 ${KEY.pixels[0].length} ${KEY.pixels.length}`);
   svg.setAttribute('shape-rendering', 'crispEdges');
   svg.setAttribute('aria-hidden', 'true');
-  KEY.forEach((row, y) => {
-    for (let x = 0; x < row.length; ) {
-      const c = row[x];
-      let end = x + 1;
-      while (row[end] === c) end++;
-      if (TONE[c]) {
-        const r = document.createElementNS(ns, 'rect');
-        r.setAttribute('x', String(x));
-        r.setAttribute('y', String(y));
-        r.setAttribute('width', String(end - x));
-        r.setAttribute('height', '1');
-        r.setAttribute('class', TONE[c]);
-        svg.append(r);
-      }
-      x = end;
-    }
-  });
+  const tones = toneMap(KEY.palette);
+  for (const { x, y, w, c } of artRuns(KEY)) {
+    const r = document.createElementNS(ns, 'rect');
+    r.setAttribute('x', String(x));
+    r.setAttribute('y', String(y));
+    r.setAttribute('width', String(w));
+    r.setAttribute('height', '1');
+    r.setAttribute('class', tones[c].name);
+    svg.append(r);
+  }
   return svg;
 }
 

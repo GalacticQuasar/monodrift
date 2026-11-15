@@ -95,7 +95,10 @@ Keep its entry format; pushing a new entry publishes it.
 When adding or changing any visual asset (trees, buildings, rocks, …), follow
 `docs/art-style.md`: grayscale pixel art, 3/4 view, light from the top-left,
 silhouette-only outlines, flat tones, baked shadows, and the sprite/atlas/
-placement pipeline.
+placement pipeline. Hand-drawn assets (e.g. the copper key; cottages, campfires)
+are `src/art/*.json` character grids with a palette from `src/art/palettes.ts`, so
+the user can edit them in the pixel editor (`npm run dev`, `/tools/pixel-editor/`,
+dev only). Write new hand-drawn art in that format rather than inline in code.
 
 ## Verifying changes
 

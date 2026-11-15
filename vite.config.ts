@@ -1,8 +1,10 @@
+/// <reference types="vitest/config" />
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import { headline, parsePatchNotes, renderPatchNotes } from './src/lib/patch-notes.ts';
+import { ART_NAME, artProblems } from './src/lib/pixel-art.ts';
 
 /** Files in public/ the game doesn't need offline (og.png is only for link previews). */
 const NOT_OFFLINE = new Set(['og.png']);
@@ -79,11 +81,60 @@ function serviceWorker(): Plugin {
   };
 }
 
+const ART_DIR = 'src/art';
+
+/**
+ * Dev server only: the pixel editor's (/tools/pixel-editor/) access to src/art/*.json.
+ * GET /__art lists every asset; PUT /__art/<name> validates and saves one.
+ */
+function pixelArt(): Plugin {
+  return {
+    name: 'monodrift-pixel-art',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__art', (req, res) => {
+        const send = (status: number, body: unknown) => {
+          res.statusCode = status;
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify(body));
+        };
+        if (req.method === 'GET' && (req.url === '/' || req.url === '')) {
+          const assets = readdirSync(ART_DIR)
+            .filter(f => f.endsWith('.json'))
+            .sort()
+            .map(f => ({ name: f.slice(0, -5), art: JSON.parse(readFileSync(join(ART_DIR, f), 'utf8')) }));
+          return send(200, assets);
+        }
+        const name = decodeURIComponent((req.url ?? '').slice(1));
+        if (req.method !== 'PUT' || !ART_NAME.test(name)) return send(404, { error: 'not found' });
+        let body = '';
+        req.on('data', chunk => (body += chunk));
+        req.on('end', () => {
+          let art: unknown;
+          try {
+            art = JSON.parse(body);
+          } catch {
+            return send(400, { error: 'not JSON' });
+          }
+          const problems = artProblems(art);
+          if (problems.length) return send(400, { error: problems.join('; ') });
+          const { palette, anchor, pixels } = art as { palette: string; anchor?: number[]; pixels: string[] };
+          // one row per line, so diffs show which rows changed
+          writeFileSync(join(ART_DIR, `${name}.json`), JSON.stringify(anchor ? { palette, anchor, pixels } : { palette, pixels }, null, 2).replace(/\[\n\s+(\d+),\n\s+(\d+)\n\s+\]/, '[$1, $2]') + '\n');
+          send(200, { ok: true });
+        });
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [patchNotes(), serviceWorker()],
+  plugins: [patchNotes(), serviceWorker(), pixelArt()],
   build: {
     rollupOptions: { input: { main: 'index.html', updates: 'updates.html' } },
   },
   // the leaderboard API runs in `npx wrangler dev` (local Worker + local database)
+  // tests read style.css (?raw) to check colour tokens; Vitest blanks CSS otherwise
+  test: { css: { include: [/style\.css/] } },
   server: { proxy: { '/api': 'http://localhost:8787' } },
 });

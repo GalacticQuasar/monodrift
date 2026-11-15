@@ -61,14 +61,43 @@ Files: `src/render/sprites.ts` (art), `src/render/scenery.ts` (placement),
    (`drawTrees`): fractional arguments to canvas calls allocate garbage every
    frame and blur pixel art.
 
+## Hand-drawn assets and the pixel editor
+
+Procedural art (trees) lives in `sprites.ts`. Hand-drawn art (buildings,
+campfires, the copper key) lives in `src/art/<name>.json`:
+
+```json
+{
+  "palette": "scenery",
+  "anchor": [7, 13],
+  "pixels": ["..oooo..", ".o3344o.", "..."]
+}
+```
+
+- Each row is a string, one character per pixel; `.` is transparent. The
+  characters are the palette's tones (`src/art/palettes.ts`): `scenery` is
+  `o` outline, `t` trunk, `1`–`4` dark → light, `s` shadow, all from `COLORS`
+  (light and dark values). Add a palette there for anything new.
+- `anchor` (optional) is the pixel to place the object by, usually its base centre.
+- `artProblems()` / `artRuns()` in `src/lib/pixel-art.ts` validate an asset and
+  split it into runs; `tests/pixel-art.test.ts` checks every file in `src/art/`.
+- **Pixel editor:** `npm run dev`, then open `/tools/pixel-editor/` (add
+  `?asset=<name>` to open one directly). It draws with the palette's tones,
+  previews at game scale (3×) on ground and road in light and dark, and saves
+  back to the JSON file. Keys: B pencil, E eraser (or right-click), G fill,
+  I pick (or Alt+click), A anchor, M mirror, 0–9 tones, arrows shift, Ctrl+Z/S.
+  It's served by the dev server only and isn't part of the build.
+
 ## Recipe: adding a new asset type (e.g. houses)
 
 1. Add its tones to `COLORS` and its tuning (sizes, variants, density,
    distance from road) to config.
-2. In `sprites.ts`, write `makeHouse(variant)` producing a sprite with a baked
-   shadow and an anchor at the base centre, plus a pure `houseReach()`.
-   Hand-designed shapes (a few variants) suit buildings better than random
-   lobes; keep the outline/light/flat-band rules.
+2. Draw the variants in the pixel editor (`src/art/house-*.json`, `scenery`
+   palette, shadow baked in with `s`, anchor at the base centre). In
+   `sprites.ts`, turn each into a sprite (paint `artRuns()` into a canvas with
+   the active palette's tones) and add a pure `houseReach()` from the art's size
+   and anchor. Hand-designed shapes suit buildings better than random lobes;
+   keep the outline/light/flat-band rules.
 3. Pack the new sprites into the shared atlas (extend `buildTreeSprites` /
    `buildAtlas` to take all sprite kinds; give each object a sprite index).
 4. In `scenery.ts`, add placement rules: houses might sit at a set distance

@@ -27,6 +27,11 @@ npm run preview    # serve the production build locally
 npm run api        # leaderboard API locally (after a build); npm run dev proxies /api to it
 ```
 
+**Pixel editor:** with `npm run dev` running, open
+[`/tools/pixel-editor/`](http://localhost:5173/tools/pixel-editor/) to draw or edit the
+hand-drawn pixel art in `src/art/` (it saves straight to the JSON files). Dev server only;
+it isn't part of the built site.
+
 The leaderboard API needs a `.dev.vars` file with `TICKET_SECRET=anything` for
 local runs (it signs run tickets; production uses a Wrangler secret).
 
@@ -82,10 +87,13 @@ src/
     sprites.ts     pixel-art tree sprites + the device-scaled atlas
   ui/              DOM: HUD, settings buttons, cursor auto-hide, install card,
                    leaderboard panel + name card, ?debug panel
-  lib/             helpers: guarded localStorage, leaderboard API client, name rules
+  art/             hand-drawn pixel art (*.json, one string per row) + palettes.ts
+  lib/             helpers: guarded localStorage, leaderboard API client, name rules,
+                   pixel-art format/validation
 worker/            Cloudflare Worker: leaderboard API (/api/*), run tickets
 migrations/        D1 database schema
-tests/             Vitest tests for sim/, scenery and leaderboard rules
+tests/             Vitest tests for sim/, scenery, leaderboard rules and pixel art
+tools/pixel-editor/ dev-only pixel editor for src/art (saves via vite.config.ts)
 docs/
   art-style.md     pixel art rules and how to add new visual assets
 ```

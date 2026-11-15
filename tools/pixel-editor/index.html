@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pixel editor · Monodrift</title>
+    <link rel="stylesheet" href="./editor.css" />
+  </head>
+  <body>
+    <header>
+      <b>Pixel editor</b>
+      <span id="doc-name">no asset open</span>
+      <span id="dirty" hidden>unsaved</span>
+      <span class="spacer"></span>
+      <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
+      <button id="redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+      <button id="copy" title="Copy the asset's JSON">Copy</button>
+      <button id="save" class="primary" title="Save to src/art (Ctrl+S)">Save</button>
+    </header>
+
+    <main>
+      <aside id="left">
+        <h2>Assets</h2>
+        <ul id="assets"></ul>
+        <div class="row">
+          <button id="new">New</button>
+          <button id="dup">Duplicate</button>
+        </div>
+        <form id="new-form" hidden>
+          <label>Name <input id="new-name" placeholder="cottage-small" required /></label>
+          <label>Palette <select id="new-palette"></select></label>
+          <div class="row">
+            <label>W <input id="new-w" type="number" min="1" max="64" value="16" /></label>
+            <label>H <input id="new-h" type="number" min="1" max="64" value="16" /></label>
+          </div>
+          <div class="row">
+            <button type="submit" class="primary">Create</button>
+            <button type="button" id="new-cancel">Cancel</button>
+          </div>
+        </form>
+        <p class="hint">
+          Saves to <code>src/art/&lt;name&gt;.json</code>. Grayscale palette for scenery; see
+          <code>docs/art-style.md</code>.
+        </p>
+      </aside>
+
+      <section id="stage">
+        <div id="canvas-wrap"><canvas id="grid"></canvas></div>
+        <div id="status">&nbsp;</div>
+        <p id="error" hidden></p>
+      </section>
+
+      <aside id="right">
+        <h2>Tools</h2>
+        <div id="tools" class="buttons">
+          <button data-tool="pencil" title="Pencil (B)">Pencil <kbd>B</kbd></button>
+          <button data-tool="eraser" title="Eraser (E), or right-click">Eraser <kbd>E</kbd></button>
+          <button data-tool="fill" title="Fill (G)">Fill <kbd>G</kbd></button>
+          <button data-tool="picker" title="Pick a tone (I), or Alt+click">Pick <kbd>I</kbd></button>
+          <button data-tool="anchor" title="Set the anchor pixel (A)">Anchor <kbd>A</kbd></button>
+        </div>
+        <label class="check"><input type="checkbox" id="mirror" /> Mirror drawing <kbd>M</kbd></label>
+        <label class="check"><input type="checkbox" id="gridlines" checked /> Grid lines</label>
+        <div class="row">
+          <span>Tones</span>
+          <div class="buttons seg" id="theme">
+            <button data-theme="light">Light</button>
+            <button data-theme="dark">Dark</button>
+          </div>
+        </div>
+        <label>Zoom <input type="range" id="zoom" min="6" max="48" value="24" /></label>
+
+        <h2>Palette <small>keys 0–9</small></h2>
+        <div id="swatches"></div>
+
+        <h2>Preview <small>game scale (3×)</small></h2>
+        <canvas id="preview"></canvas>
+
+        <h2>Canvas <small id="size"></small></h2>
+        <table id="resize">
+          <tr><td>Left</td><td><button data-side="left" data-d="-1">−</button><button data-side="left" data-d="1">+</button></td></tr>
+          <tr><td>Right</td><td><button data-side="right" data-d="-1">−</button><button data-side="right" data-d="1">+</button></td></tr>
+          <tr><td>Top</td><td><button data-side="top" data-d="-1">−</button><button data-side="top" data-d="1">+</button></td></tr>
+          <tr><td>Bottom</td><td><button data-side="bottom" data-d="-1">−</button><button data-side="bottom" data-d="1">+</button></td></tr>
+        </table>
+        <div class="row">
+          <button id="flip" title="Flip horizontally">Flip ↔</button>
+          <button id="clear-anchor">No anchor</button>
+        </div>
+        <p class="hint">Arrow keys shift the image (wrapping around).</p>
+
+      </aside>
+    </main>
+    <script type="module" src="./editor.ts"></script>
+  </body>
+</html>
