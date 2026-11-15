@@ -12,7 +12,10 @@ export const MAX_FRAME_TIME = 0.035;
 
 export const TRACK = {
   segmentLength: 20,
+  /** Half the width of the road itself (the white part). */
   halfWidth: 62,
+  /** Curb beyond each road edge: still drivable, the run ends past it. */
+  curbWidth: 12,
   /** Max heading change per segment (rad) at the sharpest bend. */
   maxCurvature: 0.13,
   /** How fast curvature eases toward the current bend's target (per segment). */
@@ -32,6 +35,9 @@ export const TRACK = {
   /** How far back the nearest-point search looks. */
   searchBehind: 6,
 } as const;
+
+/** Farthest the car may be from the centreline before it crashes: road plus curb. */
+export const ROAD_EDGE = TRACK.halfWidth + TRACK.curbWidth;
 
 export const CAR = {
   startY: 120,
@@ -179,6 +185,8 @@ export interface Palette {
   readonly theme: 'light' | 'dark';
   readonly ground: string;
   readonly road: string;
+  /** Curb: the drivable band along each road edge. */
+  readonly curb: string;
   readonly car: string;
   readonly windshield: string;
   readonly skid: string;
@@ -202,6 +210,7 @@ export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
     theme: 'light',
     ground: '#e8e8e8',
     road: '#fff',
+    curb: '#c4c4c4',
     car: '#111',
     windshield: '#e8e8e8',
     skid: '#000',
@@ -219,6 +228,7 @@ export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
     theme: 'dark',
     ground: '#1b1b1b',
     road: '#383838',
+    curb: '#505050',
     car: '#f0f0f0',
     windshield: '#1b1b1b',
     skid: '#000',

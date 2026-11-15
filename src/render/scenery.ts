@@ -2,7 +2,7 @@
 // a world grid, seeded by the run's seed so a road always gets the same forest, and
 // kept clear of the road. Render-only state.
 
-import { CAMPFIRE, SCENERY, TRACK } from '../config';
+import { CAMPFIRE, ROAD_EDGE, SCENERY } from '../config';
 import type { GameState } from '../sim/game';
 import { createRng } from '../sim/rng';
 import type { Track } from '../sim/track';
@@ -79,7 +79,7 @@ function roadDistSq(track: Track, from: number, x: number, y: number): number {
 }
 
 /** Closest a prop reaching `r` px may be to the road's centreline. */
-const roadClearance = (r: number) => TRACK.halfWidth + r + SCENERY.roadMargin;
+const roadClearance = (r: number) => ROAD_EDGE + r + SCENERY.roadMargin;
 
 function clearOfRoad(track: Track, from: number, x: number, y: number, r: number): boolean {
   return roadDistSq(track, from, x, y) >= roadClearance(r) ** 2;

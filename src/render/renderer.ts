@@ -1,6 +1,6 @@
 // Draws a GameState. Read-only: never modifies the state.
 
-import { CAMPFIRE, CAR, SCENERY, SKIDS, TRACK, VIEW, type Palette } from '../config';
+import { CAMPFIRE, CAR, ROAD_EDGE, SCENERY, SKIDS, TRACK, VIEW, type Palette } from '../config';
 import type { GameState } from '../sim/game';
 import { followCar } from './camera';
 import { createScenery, type Prop, type Scenery } from './scenery';
@@ -93,6 +93,10 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
     for (let i = a + 1; i < b; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
+    // curb: a wider stroke under the road
+    ctx.strokeStyle = colors.curb;
+    ctx.lineWidth = ROAD_EDGE * 2;
+    ctx.stroke();
     ctx.strokeStyle = colors.road;
     ctx.lineWidth = TRACK.halfWidth * 2;
     ctx.stroke();

@@ -1,7 +1,7 @@
 // The whole simulation. No DOM, no clock, no Math.random: the same seed and the
 // same sequence of intents always produce the same run.
 
-import { TRACK } from '../config';
+import { ROAD_EDGE, TRACK } from '../config';
 import { createCar, slipOf, updateCar, type Car, type Steer } from './car';
 import { createRng } from './rng';
 import { distanceScore } from './scoring';
@@ -65,7 +65,7 @@ export function step(g: GameState, intent: SteerIntent, dt: number, rules: Rules
 
   emitSkids(g.skids, g.car, slipOf(g.car));
 
-  if (rules.crash && near.distSq > TRACK.halfWidth ** 2) {
+  if (rules.crash && near.distSq > ROAD_EDGE ** 2) {
     g.phase = 'over';
     return 'crash';
   }

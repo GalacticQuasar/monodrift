@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CAMPFIRE, SCENERY, TRACK } from '../src/config';
+import { CAMPFIRE, ROAD_EDGE, SCENERY } from '../src/config';
 import { createScenery, type Prop } from '../src/render/scenery';
 import { SPRITES } from '../src/render/sprites';
 import { createGame, step } from '../src/sim/game';
@@ -29,7 +29,7 @@ describe('scenery', () => {
     for (const t of props) {
       for (const p of g.track.pts) closest = Math.min(closest, Math.hypot(p.x - t.x, p.y - t.y) - t.r);
     }
-    expect(closest).toBeGreaterThanOrEqual(TRACK.halfWidth + SCENERY.roadMargin - 1e-9);
+    expect(closest).toBeGreaterThanOrEqual(ROAD_EDGE + SCENERY.roadMargin - 1e-9);
   });
 
   it('gives the same forest for the same seed', () => {
@@ -45,7 +45,7 @@ describe('scenery', () => {
       for (const p of props.filter(p => p.sprite === SPRITES.campfire)) {
         fires++;
         const d = Math.min(...g.track.pts.map(q => Math.hypot(q.x - p.x, q.y - p.y)));
-        const min = TRACK.halfWidth + SCENERY.roadMargin + p.r + CAMPFIRE.roadMinGap;
+        const min = ROAD_EDGE + SCENERY.roadMargin + p.r + CAMPFIRE.roadMinGap;
         expect(d).toBeGreaterThanOrEqual(min - 1e-9);
         expect(d).toBeLessThanOrEqual(min + CAMPFIRE.roadGap + 1e-9);
         expect(p.frames).toBe(SPRITES.campfireFrames);
