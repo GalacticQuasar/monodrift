@@ -116,6 +116,58 @@ canvas {
 #msg span.later {
   animation: msg-fade-in 0.2s ease-out both;
 }
+/* desktop start screen: keycaps (ui/hud.ts) */
+#msg .keys {
+  margin: 10px 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+#msg kbd {
+  display: inline-block;
+  vertical-align: middle;
+  min-width: 12px;
+  margin: 0 3px;
+  padding: 3px 4px 3px;
+  font: 12px/12px var(--pixel);
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: var(--frame), inset -2px -2px var(--shade), 2px 2px 0 2px var(--shadow);
+}
+#msg kbd + kbd {
+  margin-left: 5px;
+}
+#msg .arrow {
+  display: block;
+  width: 12px;
+  height: 10px;
+  margin: 1px 0; /* 12px tall, like a letter */
+  fill: currentColor;
+  shape-rendering: crispEdges;
+}
+#msg .arrow.left,
+#msg .side-hint.left {
+  transform: scaleX(-1);
+}
+/* phone start screen, Sides mode: chevrons at the screen edges, level with the text */
+#msg .side-hint {
+  position: absolute;
+  top: 50%;
+  margin-top: -15px;
+  width: 18px;
+  height: 30px;
+  fill: var(--ink);
+  shape-rendering: crispEdges;
+}
+#msg:has(.side-hint) span {
+  display: block;
+  padding: 0 54px; /* keep the text clear of the chevrons (the title sits above them) */
+}
+#msg .side-hint.left {
+  left: max(32px, env(safe-area-inset-left));
+}
+#msg .side-hint.right {
+  right: max(32px, env(safe-area-inset-right));
+}
 @keyframes msg-fade-in {
   from {
     opacity: 0;
