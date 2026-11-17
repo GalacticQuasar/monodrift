@@ -1,7 +1,4 @@
 Fixes:
-- Start screen intuitiveness for first-time player
-  - On desktop, show keyboard key looking elements for left/right or A/D instead of just the characters
-  - On mobile, make left/right (sides mode) start screen show vertically centered arrows/chevrons on the sides of the screen
 - Track: make straights more straight and less wiggly
   - Add tighter curves or more types of curves that appear later as you progress in the track
     - Maybe even near 180 turns
