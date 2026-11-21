@@ -5,6 +5,17 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-21 (10)
+
+- Covers: `5b75186` to `3d42c96` (linear Uncapped speed, gentler bends; vapor cone look tweaks left out)
+- Last commit: `3d42c96`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Controls and feel**
+- **Uncapped speed**: the car now speeds up steadily, the whole way. Steering feels the same as in Normal, and instead the road's bends get gentler the further you go, so you can keep up. The sonic boom still happens at the same speed, a little later into the run
+
 ## 2026-11-21 (9)
 
 - Covers: `1f5559f` to `7c4d211` (sonic boom, new Uncapped speed curve)
