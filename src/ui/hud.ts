@@ -60,9 +60,9 @@ export interface Hud {
   /** Room round about to start: 3, 2, 1. */
   showCountdown(n: number): void;
   /** Room: crashed with `score`; watching `name` drive on (null: waiting for the results). */
-  showSpectating(score: number, name: string | null): void;
+  showSpectating(score: number, name: string | null, canSwitch?: boolean): void;
   /** Room: joined mid-round, watching `name` until the next one. */
-  showWatching(name: string | null): void;
+  showWatching(name: string | null, canSwitch?: boolean): void;
   /** A short announcement ("Ben wins!", "Last one standing!") with one line under it. */
   showBanner(title: string, line: string): void;
   /**
@@ -146,14 +146,14 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
     showCountdown(n) {
       message(String(n), ['get ready']);
     },
-    showSpectating(score, name) {
-      message(String(score), [name ? `watching ${name}` : 'waiting for the results']);
+    showSpectating(score, name, canSwitch = false) {
+      message(String(score), [name ? `watching ${name}` : 'waiting for the results', ...(canSwitch ? [`${PRESS} to switch`] : [])]);
     },
     showBanner(title, line) {
       message(title, [line]);
     },
-    showWatching(name) {
-      message('Watching', [name ? `${name} is driving · you're in the next round` : "you're in the next round"]);
+    showWatching(name, canSwitch = false) {
+      message('Watching', [name ? `${name} is driving · you're in the next round` : "you're in the next round", ...(canSwitch ? [`${PRESS} to switch`] : [])]);
     },
     setFriendLink(fn) {
       onFriend = fn;

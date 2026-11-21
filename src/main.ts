@@ -163,6 +163,10 @@ const input = createInput(canvas, {
       return true;
     }
     if (game.phase === 'run') return false;
+    if (session && game.phase === 'over' && session.room?.phase === 'racing') {
+      switchFollow(); // out of the round: a tap/key watches the next car still driving
+      return true;
+    }
     if (session || roomCard.shown) return true; // rounds start from the room, not a tap
     if (performance.now() < retryAllowedAt) return true; // swallow the tap
     // from the start screen, drive the road already on screen; a retry gets a new one
@@ -226,6 +230,9 @@ function runEnded() {
   }
 }
 
+/** Rivals still driving when the spectating line was last updated (no garbage: counted, not filtered). */
+let racingShown = 0;
+
 /** After the player crashes, the camera follows a rival still racing (spectating). */
 function updateFollow() {
   const prev = view.follow;
@@ -238,7 +245,11 @@ function updateFollow() {
   view.follow = f;
   // the road ahead of them may not exist yet: it's only generated around the player
   if (f) extendTrack(game.track, f.pose.i + TRACK.pointsAhead);
-  if (session && f !== prev && game.phase === 'over' && session.room?.phase === 'racing') showRoomSpectating();
+  // who's left changed (someone crashed, or we switched): update "watching …" and the switch hint
+  let racing = 0;
+  for (const r of view.rivals) if (r.state === 'racing') racing++;
+  if (session && (f !== prev || racing !== racingShown) && game.phase === 'over' && session.room?.phase === 'racing') showRoomSpectating();
+  racingShown = racing;
 }
 
 // ---- multiplayer rooms ----
@@ -451,13 +462,23 @@ function roomRunEnded() {
   debug?.event('crash (room)');
 }
 
+/** Watch the next rival still driving (in room order, wrapping round). */
+function switchFollow() {
+  const racing = view.rivals.filter(r => r.state === 'racing');
+  if (racing.length < 2) return;
+  const i = view.follow ? racing.indexOf(view.follow) : -1;
+  view.follow = racing[(i + 1) % racing.length]; // updateFollow keeps it while they drive
+  showRoomSpectating();
+}
+
 /** The player's own round is over (or they're watching one): say who's still driving. */
 function showRoomSpectating() {
   const room = session?.room;
   if (room?.phase !== 'racing' || win.shown || (winShown.round === room.round && winShown.banner)) return; // the win says it all
   const name = view.follow?.name ?? null;
-  if (watching) hud.showWatching(name);
-  else hud.showSpectating(game.score, name);
+  const canSwitch = view.rivals.filter(r => r.state === 'racing').length > 1;
+  if (watching) hud.showWatching(name, canSwitch);
+  else hud.showSpectating(game.score, name, canSwitch);
 }
 
 function hideMenuCards() {
