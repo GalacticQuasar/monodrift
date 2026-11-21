@@ -1,10 +1,23 @@
 Fixes:
+- Reloading page when in a room shouldn't make everyone else go and make you spectate...
+- Tire marks when turning (drifting) appear a little farther out from where the wheels are when turning at low speed
+- Visibility: Hide nametags when they get closer? Or have toggle to hide nametags
+- Multiplayer: opponent movement is choppy sometimes, maybe could increase update rate a little bit
 - Track: make straights more straight and less wiggly
   - Add tighter curves or more types of curves that appear later as you progress in the track
     - Maybe even near 180 turns
 - Fix jitters - but only seem to be present on windows laptops, mac laptop runs really smoothly
 
 Features:
+- Add spedometer
+- Explosion when you die
+- Unlock colors if you get past a certain threshold of score (maybe the year color tv was released: 1738?)
+- Multiplayer: win condition option for +100 or some number of distance/points so one wins over the other
+- Mulitplayer: race mode with a finish line (whoever crosses first wins)
+- Make a loop? Measure time for score... like grand prix
+- Bot mode/leaderboards
+- More car types (f1 car, etc.)
+  - Change vik green easter egg from f l o r i d a to changing your car into an F1 car
 - Sharing run result
   - People who click on shared run can race that run's ghost
 - Keybinds changing
@@ -17,6 +30,7 @@ Features:
     - Could be styled white&grey alternating
 - Art: Make cottages
 - Art: pond with "cute fish jumping"
+- Add cutscenes with characters? Like you can drive off track to a direction and meet a character and race against them?
 
 Autonomous Bots:
 - RL train
