@@ -153,7 +153,7 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
       if (props && colors.glow) drawProps(props, cam, frame, true);
       if (layers.has('car')) {
         drawRivals(rivals); // under the player's own car
-        drawCone(g, cx, cy);
+        drawCone(g, cx, cy, ch);
         drawCar(cx, cy, ch, carColorValue(view.carColor, colors.theme) ?? colors.car, colors.windshield);
         drawShock(view.boom, now);
       }
@@ -218,12 +218,12 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
   }
 
   /**
-   * Uncapped, near and past the sound barrier: a V of vapor around the car, its tip a
-   * little ahead of the nose, dense there and thinning out to nothing at the ends
+   * Uncapped, near and past the sound barrier: a V of vapor around the car, pointing
+   * where the car points, its tip a little ahead of the nose, dense there and thinning out to nothing at the ends
    * (drawn as CONE_STEPS segments of falling opacity and width: no gradient objects per
    * frame). Fades in from UNCAPPED.coneSpeed and narrows as the car gets faster.
    */
-  function drawCone(g: GameState, x: number, y: number) {
+  function drawCone(g: GameState, x: number, y: number, h: number) {
     const v = speedOf(g);
     if (v < UNCAPPED.coneSpeed || g.phase === 'over') return;
     const fade = Math.min(1, (v - UNCAPPED.coneSpeed) / (UNCAPPED.boomSpeed - UNCAPPED.coneSpeed));
@@ -233,7 +233,7 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
     const dx = -Math.cos(half) * len, dy = Math.sin(half) * len;
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(Math.atan2(g.car.vy, g.car.vx));
+    ctx.rotate(h); // along the car, even mid-drift
     ctx.strokeStyle = colors.cone;
     ctx.lineCap = 'round';
     for (let k = 0; k < CONE_STEPS; k++) {
