@@ -1,11 +1,15 @@
 import './style.css';
-import { COLORS, MAX_FRAME_TIME, SIM_HZ, SPEED, UI } from './config';
+import { COLORS, MAX_FRAME_TIME, SIM_HZ, SPEED, TRACK, UI } from './config';
 import { createInput } from './input/input';
 import { DESKTOP } from './lib/device';
 import { KEYS, storage } from './lib/storage';
 import { startLoop } from './loop';
-import { ALL_LAYERS, createRenderer } from './render/renderer';
+import { ALL_LAYERS, createRenderer, type View } from './render/renderer';
 import { api } from './lib/api';
+import { createRunRecorder } from './lib/run-recorder';
+import { createBot } from './net/bot';
+import type { Rival } from './net/rivals';
+import { extendTrack } from './sim/track';
 import { dailySeed, utcDay } from './sim/daily';
 import { crashedAtStart, createGame, step } from './sim/game';
 import { autoHideCursor } from './ui/cursor';
@@ -30,6 +34,13 @@ const renderer = createRenderer(canvas, COLORS.light, layers); // palette set by
 const hud = createHud($('#score'), $('#msg'));
 const egg = createEgg($('#egg'), canvas);
 const debug = createDebug();
+/** The player's run as pose samples (sent to a room; later, saved as a ghost). */
+const recorder = createRunRecorder();
+/** Debug rival on the player's road (?debug&bot). */
+const bot = debug && new URLSearchParams(location.search).has('bot') ? createBot() : null;
+const rivals: Rival[] = bot ? [bot.rival] : [];
+/** Other cars for the renderer (reused every frame). */
+const view: View = { rivals, follow: null };
 autoHideCursor();
 const install = createInstallPrompt($('#install'));
 const news = createNews($('#news'), __LATEST_NOTES__);
@@ -57,6 +68,7 @@ function showReady() {
   paused = false;
   input.clear();
   egg.hide();
+  bot?.stop();
   game = createGame(roadSeed());
   showStart();
   menuCards();
@@ -125,6 +137,8 @@ const input = createInput(canvas, {
     if (performance.now() < retryAllowedAt) return true; // swallow the tap
     // from the start screen, drive the road already on screen; a retry gets a new one
     game = createGame(game.phase === 'ready' ? game.seed : roadSeed(), 'run');
+    recorder.start(game);
+    bot?.start(game.seed);
     // the server times the run from here, which caps the score it will accept
     best = loadBest();
     ticket = settings.zen || settings.speed !== 'normal' ? Promise.resolve(null) : api.ticket(game.seed, settings.daily).catch(() => null);
@@ -140,7 +154,12 @@ const input = createInput(canvas, {
 
 function tick(dt: number) {
   if (paused) return;
-  if (step(game, input.intent(), dt, { crash: !settings.zen, speed: SPEED[settings.speed] }) !== 'crash') return;
+  const rules = { crash: !settings.zen, speed: SPEED[settings.speed] };
+  bot?.tick(dt, rules);
+  if (game.phase !== 'run') return;
+  const crashed = step(game, input.intent(), dt, rules) === 'crash';
+  recorder.record(game, crashed);
+  if (!crashed) return;
   const backwards = crashedAtStart(game);
   const retryDelay = backwards ? UI.eggRetryDelayMs : UI.retryDelayMs;
   retryAllowedAt = performance.now() + retryDelay;
@@ -162,6 +181,14 @@ function tick(dt: number) {
   }
 }
 
+/** After the player crashes, the camera follows a rival still racing (spectating). */
+function updateFollow() {
+  const f = game.phase === 'over' ? (rivals.find(r => r.state === 'racing') ?? null) : null;
+  view.follow = f;
+  // the road ahead of them may not exist yet: it's only generated around the player
+  if (f) extendTrack(game.track, f.pose.i + TRACK.pointsAhead);
+}
+
 // debug timing (only with ?debug); reused object so measuring makes no garbage
 const counters = { steps: 0, simMs: 0, drawMs: 0, trees: 0, cellsGenerated: 0, cellsEvicted: 0, skids: 0 };
 
@@ -177,7 +204,9 @@ startLoop({
   },
   render(alpha, now) {
     const t0 = debug ? performance.now() : 0;
-    renderer.draw(game, paused ? 1 : alpha, now); // paused: no stepping, so draw the last state exactly
+    bot?.update(now);
+    updateFollow();
+    renderer.draw(game, paused ? 1 : alpha, now, view); // paused: no stepping, so draw the last state exactly
     hud.setScore(game.phase === 'ready' || settings.zen ? '' : String(game.score));
     if (!debug) return;
     counters.drawMs = performance.now() - t0;

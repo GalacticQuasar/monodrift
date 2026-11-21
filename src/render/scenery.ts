@@ -39,7 +39,8 @@ export interface Scenery {
    * Props overlapping the given world-space rectangle, back to front.
    * The returned array is reused: valid until the next call.
    */
-  visible(g: GameState, left: number, top: number, right: number, bottom: number): Prop[];
+  /** `index`: the track point the view is around (the car in focus), for placing new trees. */
+  visible(g: GameState, left: number, top: number, right: number, bottom: number, index?: number): Prop[];
   /** For debugging: running totals, and props returned by the last visible() call. */
   readonly stats: { cellsGenerated: number; cellsEvicted: number; trees: number };
 }
@@ -147,10 +148,10 @@ function generateCampfire(g: GameState, cx: number, cy: number, from: number): P
 /** Looks up the campfire of a cell (null for none); remembered, so neighbours agree. */
 type FireAt = (cx: number, cy: number) => Prop | null;
 
-function generateCell(g: GameState, cx: number, cy: number, fireAt: FireAt): Prop[] {
+function generateCell(g: GameState, focus: number, cx: number, cy: number, fireAt: FireAt): Prop[] {
   const d = forest(g.seed, cx, cy);
   if (d <= 0) return [];
-  const from = Math.max(0, g.trackIndex - SCENERY.checkBehind);
+  const from = Math.max(0, focus - SCENERY.checkBehind);
   const rng = createRng(hash(g.seed, cx, cy));
   // campfires here or next door: trees keep a clearing around them
   const fires: Prop[] = [];
@@ -224,11 +225,12 @@ export function createScenery(): Scenery {
   // campfire per cell (null: none), worked out once so a cell and its neighbours agree
   const fires = new Map<number, Prop | null>();
   let game: GameState | null = null;
+  let focus = 0;
   const fireAt: FireAt = (cx, cy) => {
     const key = cellKey(cx, cy);
     let f = fires.get(key);
     if (f === undefined) {
-      f = generateCampfire(game!, cx, cy, Math.max(0, game!.trackIndex - SCENERY.checkBehind));
+      f = generateCampfire(game!, cx, cy, Math.max(0, focus - SCENERY.checkBehind));
       fires.set(key, f);
     }
     return f;
@@ -238,13 +240,14 @@ export function createScenery(): Scenery {
 
   return {
     stats,
-    visible(g, left, top, right, bottom) {
+    visible(g, left, top, right, bottom, index = g.trackIndex) {
       if (g !== owner) {
         owner = g; // new run: new forest
         cells.clear();
         fires.clear();
       }
       game = g;
+      focus = index;
 
       const x0 = Math.floor((left - VIEW_PAD) / CELL), x1 = Math.floor((right + VIEW_PAD) / CELL);
       const y0 = Math.floor((top - VIEW_PAD) / CELL), y1 = Math.floor((bottom + VIEW_PAD) / CELL);
@@ -271,7 +274,7 @@ export function createScenery(): Scenery {
           const key = cellKey(cx, cy);
           let cell = cells.get(key);
           if (!cell) {
-            cells.set(key, (cell = { cx, cy, props: generateCell(g, cx, cy, fireAt) }));
+            cells.set(key, (cell = { cx, cy, props: generateCell(g, focus, cx, cy, fireAt) }));
             stats.cellsGenerated++;
           }
           const props = cell.props;

@@ -115,6 +115,23 @@ export const INPUT = {
   sensitivity: [0.7, 0.85, 1, 1.15, 1.3],
 } as const;
 
+/** Other cars on the road (multiplayer rivals; later, ghosts). */
+export const NET = {
+  /** A pose sample is taken (and sent) every this many sim steps: 120 Hz / 8 = 15 a second. */
+  sampleEvery: 8,
+  /** Live rivals play back this far behind the newest sample, to ride out network jitter. */
+  bufferMs: 120,
+  /** When samples are late, keep a rival moving this long before it stops. */
+  maxExtrapolateMs: 250,
+  /** How fast the playback delay grows back after a fast arrival (ms per ms). */
+  offsetCreep: 0.02,
+  /** Off-screen arrow: distance from the screen edge (px). */
+  arrowInset: 22,
+  /** Debug bot (?debug&bot): fake network delay and its random spread (ms). */
+  botLatencyMs: 80,
+  botJitterMs: 50,
+} as const;
+
 export const VIEW = {
   /** Car's vertical position on screen (fraction of height). */
   carScreenY: 0.66,
@@ -189,6 +206,10 @@ export interface Palette {
   readonly curb: string;
   readonly car: string;
   readonly windshield: string;
+  /** Other players' cars, their windshield, and their name labels / off-screen arrows. */
+  readonly rivalCar: string;
+  readonly rivalWindshield: string;
+  readonly rivalLabel: string;
   readonly skid: string;
   /** Multiplies SKIDS.maxAlpha (marks need more strength on a dark road). */
   readonly skidStrength: number;
@@ -213,6 +234,9 @@ export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
     curb: '#c4c4c4',
     car: '#111',
     windshield: '#e8e8e8',
+    rivalCar: '#7d7d7d',
+    rivalWindshield: '#e8e8e8',
+    rivalLabel: '#555',
     skid: '#000',
     skidStrength: 1,
     treeShadow: 'rgba(0,0,0,0.1)',
@@ -231,6 +255,9 @@ export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
     curb: '#505050',
     car: '#f0f0f0',
     windshield: '#1b1b1b',
+    rivalCar: '#9a9a9a',
+    rivalWindshield: '#1b1b1b',
+    rivalLabel: '#aaa',
     skid: '#000',
     skidStrength: 2,
     treeShadow: 'rgba(0,0,0,0.35)',
