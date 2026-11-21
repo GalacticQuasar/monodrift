@@ -116,7 +116,7 @@ export function createSettings(
     close();
     onFriends();
   });
-  refreshers.push(() => (friendsBtn.textContent = inRoom ? 'Leave room' : 'Invite'));
+  refreshers.push(() => (friendsBtn.textContent = inRoom ? 'Leave room' : 'Play'));
   const friendsRow = el('div', { className: 'row' }, el('span', { className: 'label', textContent: 'Friends' }), el('div', { className: 'seg' }, friendsBtn));
 
   function sensitivityRow(): HTMLElement {

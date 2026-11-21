@@ -999,3 +999,21 @@ button:disabled {
     opacity: 0;
   }
 }
+/* room card: join by code (ui/room.ts) */
+#room .code-input {
+  font: 16px var(--pixel);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+#room .code-input::placeholder {
+  text-transform: none;
+  letter-spacing: normal;
+  font: 16px var(--sans);
+}
+#room .new-room {
+  align-items: center;
+  margin-top: 4px;
+}
+#room .new-room span {
+  color: var(--muted);
+}

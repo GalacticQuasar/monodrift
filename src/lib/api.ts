@@ -88,4 +88,8 @@ export const api = {
   async createRoom(): Promise<string> {
     return (await call<{ code: string }>('POST', 'rooms')).code;
   },
+  /** Whether room `code` exists (was made and hasn't closed) and has a free seat. */
+  roomInfo(code: string): Promise<{ open: boolean; players: number; full: boolean }> {
+    return call('GET', `rooms/${code}`);
+  },
 };

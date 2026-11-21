@@ -127,7 +127,7 @@ const settings = createSettings($('#settings-btn'), $('#settings'), changed => {
   } else if (!open && paused) {
     hud.showPaused(); // resuming the moment the panel closes would crash the car before you're ready
   }
-}, () => (session ? leaveRoom() : startRoom()));
+}, () => (session ? leaveRoom() : openFriends()));
 
 /** The car colour as sent to rooms and the renderer (null: default). */
 const carColorId = () => (settings.car === 'default' ? null : settings.car);
@@ -259,7 +259,33 @@ const roomCard = createRoomCard($('#room'), {
   declineLeaderboard: () => storage.set(KEYS.namePrompt, 'skipped'),
 });
 
-/** "Drive with a friend": make a room, then join it. */
+/** "Drive with a friend": the card to join a room by code or make a new one. */
+function openFriends() {
+  if (session) return;
+  roomAttempt++; // drops a room still being made from an earlier tap
+  hideMenuCards();
+  hud.hideMessage();
+  roomCard.showStart(joinByCode, startRoom);
+}
+
+/** A code typed on the card: check the room is there with a seat, then join. Returns a problem to show, or null. */
+async function joinByCode(code: string): Promise<string | null> {
+  const attempt = roomAttempt;
+  let info;
+  try {
+    info = await api.roomInfo(code);
+  } catch (e) {
+    return e instanceof ApiError ? `${e.message[0].toUpperCase()}${e.message.slice(1)}.` : 'Something went wrong.';
+  }
+  if (attempt !== roomAttempt || session) return null; // closed the card meanwhile
+  if (!info.open) return 'No room with that code. It may have closed.';
+  if (info.full) return 'That room is full.';
+  history.replaceState(null, '', `?${roomParam(code)}`);
+  joinRoom(code);
+  return null;
+}
+
+/** "New room": make a room, then join it. */
 async function startRoom() {
   if (session) return;
   const attempt = ++roomAttempt;
@@ -316,7 +342,7 @@ function leaveRoom() {
   view.rivals = botRivals;
   view.follow = null;
   settings.setInRoom(false);
-  hud.setFriendLink(startRoom);
+  hud.setFriendLink(openFriends);
   roomCard.hide();
   history.replaceState(null, '', location.pathname + (roomParam(null) ? `?${roomParam(null)}` : ''));
   showReady();
@@ -496,7 +522,7 @@ startLoop({
   },
 });
 
-hud.setFriendLink(startRoom);
+hud.setFriendLink(openFriends);
 const linkedRoom = normalizeCode(new URLSearchParams(location.search).get('room') ?? '');
 if (isRoomCode(linkedRoom)) {
   joinRoom(linkedRoom);

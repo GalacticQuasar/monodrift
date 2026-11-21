@@ -4,13 +4,18 @@
 
 import { DESKTOP } from '../lib/device';
 import { cleanName, nameProblem, NAME_MAX } from '../lib/names';
-import type { RoadKind, RoomView } from '../lib/room-protocol';
+import { isRoomCode, normalizeCode, ROOM, type RoadKind, type RoomView } from '../lib/room-protocol';
 import type { RoomSession, SessionError } from '../net/room-session';
 import { trophyIcon } from './win';
 
 export interface RoomCard {
   /** Ask for a name before joining (players without a leaderboard name). */
   askName(initial: string, submit: (name: string) => void): void;
+  /**
+   * "Drive with a friend": join a room by its code, or make a new one. `join` resolves
+   * to an error message to show, or null once joining is under way.
+   */
+  showStart(join: (code: string) => Promise<string | null>, create: () => void): void;
   /** Making a new room (waiting for the server). */
   showCreating(): void;
   /** Creating a room failed. */
@@ -218,6 +223,39 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
   }
 
   return {
+    showStart(join, create) {
+      const input = el('input', { type: 'text', maxLength: 64, placeholder: 'code', spellcheck: false, className: 'code-input' });
+      input.setAttribute('autocomplete', 'off');
+      input.setAttribute('autocapitalize', 'characters');
+      input.setAttribute('aria-label', 'Room code');
+      const error = el('p', { className: 'error' });
+      const go = el('button', { type: 'submit', className: 'primary', textContent: 'Join' });
+      const form = el('form', { className: 'name-form' }, el('div', { className: 'row' }, input, go), error);
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        // a pasted room link works too
+        const raw = input.value.trim();
+        const fromLink = /[?&]room=([A-Za-z0-9]+)/.exec(raw)?.[1];
+        const code = normalizeCode(fromLink ?? raw);
+        if (!isRoomCode(code)) {
+          error.textContent = `Room codes are ${ROOM.codeLength} letters and numbers.`;
+          return;
+        }
+        go.disabled = true;
+        error.textContent = '';
+        const problem = await join(code);
+        go.disabled = false;
+        if (problem && input.isConnected) error.textContent = problem;
+        else input.blur();
+      });
+      show(
+        'Drive with a friend',
+        el('p', { textContent: "Join a friend's room with its code:" }),
+        form,
+        el('div', { className: 'buttons new-room' }, el('span', { textContent: 'or' }), button('New room', create)),
+      );
+      if (DESKTOP) input.focus({ preventScroll: true });
+    },
     askName(initial, submit) {
       const input = el('input', { type: 'text', value: initial, maxLength: NAME_MAX, placeholder: 'your name', spellcheck: false });
       input.setAttribute('autocomplete', 'nickname');

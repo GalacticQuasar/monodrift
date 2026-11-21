@@ -61,7 +61,8 @@ no framework, canvas 2D. See `README.md` for the file layout.
   the start screen keeps the road already on screen; retries get a new one.
 - Settings and identity live in localStorage under `monodrift-*` (`lib/storage.ts`).
 - Two top buttons only: Leaderboard and Settings (icons on phones). "Drive with a friend"
-  is a link under the start/game-over message plus a Friends row in Settings. Road, Zen, Speed,
+  is a link under the start/game-over message plus a Friends row in Settings (Play); both
+  open the room card's start: join by code (or pasted link) or make a New room. Road, Zen, Speed,
   Steering, Sensitivity, Trees and Dark live in the Settings panel (`ui/settings.ts`); changing Road, Zen
   or Speed starts over. Opening Settings mid-run pauses the run; after closing it, the next
   tap/key resumes (not in a room, see below). Sensitivity scales steering in `input/`, never in the sim.
