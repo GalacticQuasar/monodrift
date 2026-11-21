@@ -219,7 +219,12 @@ function runEnded() {
 /** After the player crashes, the camera follows a rival still racing (spectating). */
 function updateFollow() {
   const prev = view.follow;
-  const f = game.phase === 'over' ? (view.rivals.find(r => r.state === 'racing') ?? null) : null;
+  // stay on whoever we're watching until they crash, then switch to the leader
+  let f: Rival | null = null;
+  if (game.phase === 'over') {
+    if (prev && prev.state === 'racing' && view.rivals.includes(prev)) f = prev;
+    else for (const r of view.rivals) if (r.state === 'racing' && (!f || r.pose.i > f.pose.i)) f = r;
+  }
   view.follow = f;
   // the road ahead of them may not exist yet: it's only generated around the player
   if (f) extendTrack(game.track, f.pose.i + TRACK.pointsAhead);

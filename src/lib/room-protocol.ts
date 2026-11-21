@@ -10,7 +10,7 @@
 export const PROTOCOL = 1;
 
 export const ROOM = {
-  maxPlayers: 2,
+  maxPlayers: 4,
   /** Room codes: this many letters from CODE_ALPHABET. */
   codeLength: 4,
   /** Countdown before a round starts (each game counts down from receiving `start`). */

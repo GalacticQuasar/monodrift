@@ -117,6 +117,22 @@ describe('room: rounds', () => {
     expect(s.players.map(p => p.score)).toEqual([0, 0]);
   });
 
+  it('a full room of four: poses go to the other three, the round ends after the last crash', () => {
+    expect(ROOM.maxPlayers).toBe(4);
+    const s = newRoom();
+    const ids = ['a', 'b', 'c', 'd'];
+    for (const id of ids) joined(s, id);
+    for (const id of ids) send(s, id, { t: 'ready', ready: true });
+    expect(s.phase).toBe('racing');
+    expect(send(s, 'c', { t: 'pose', r: 1, d: [] }).out).toEqual([{ except: 'c', msg: { t: 'pose', id: 'c', r: 1, d: [] } }]);
+    ids.forEach((id, k) => {
+      expect(s.phase).toBe('racing');
+      send(s, id, { t: 'crash', r: 1, s: 100 * k, score: 10 * k });
+    });
+    expect(s.phase).toBe('results');
+    expect(s.players.map(p => p.score)).toEqual([0, 10, 20, 30]);
+  });
+
   it('a player leaving mid-round ends it if nobody else is driving', () => {
     const { s } = racing();
     send(s, 'a', { t: 'crash', r: 1, s: 900, score: 40 });

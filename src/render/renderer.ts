@@ -35,6 +35,13 @@ export interface Renderer {
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
+/** Most off-screen arrows kept apart from each other (one per rival in a full room). */
+const MAX_ARROWS = 8;
+/** Screen positions of the arrows drawn so far this frame (x, y pairs; reused). */
+const placed = new Float64Array(MAX_ARROWS * 2);
+/** Name labels drawn so far this frame (x, y, w, h in device px; reused). */
+const labelBoxes = new Float64Array(MAX_ARROWS * 4);
+
 /** Rival name labels and gap numbers: CSS px (Silkscreen is a pixel font: keep to multiples of 8). */
 const LABEL_PX = 16;
 
@@ -82,10 +89,10 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
   let atlas: Atlas | null = null;
   let W = 0, H = 0, dpr = 1;
   // per rival: name label, and off-screen arrow gap (string rebuilt only when it changes)
-  const texts = new Map<Rival, { name: TextSprite; gap: TextSprite; gapValue: number; gapText: string }>();
+  const texts = new Map<Rival, { name: TextSprite; gap: TextSprite; gapValue: number; gapNamed: boolean; gapText: string }>();
   const textsOf = (r: Rival) => {
     let t = texts.get(r);
-    if (!t) texts.set(r, (t = { name: newTextSprite(), gap: newTextSprite(), gapValue: NaN, gapText: '' }));
+    if (!t) texts.set(r, (t = { name: newTextSprite(), gap: newTextSprite(), gapValue: NaN, gapNamed: false, gapText: '' }));
     return t;
   };
   // a label drawn before Silkscreen arrived used the fallback font: redraw them all
@@ -214,16 +221,41 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
 
   /** Name above each rival car, upright. Device space. */
   function drawLabels(rivals: readonly Rival[], cam: { x: number; y: number }) {
+    let n = 0;
     for (let i = 0; i < rivals.length; i++) {
       const r = rivals[i];
       if (r.state !== 'racing' && r.state !== 'crashed') continue;
       const img = renderText(textsOf(r).name, r.name, colors.rivalLabel, dpr);
-      ctx.globalAlpha = r.state === 'crashed' ? 0.5 : 1;
       const x = Math.round((r.pose.x + cam.x) * dpr - img.width / 2);
-      const y = Math.round((r.pose.y + cam.y - CAR.length * 0.7) * dpr - img.height);
+      const off = CAR.length * 0.7 * dpr;
+      const carY = (r.pose.y + cam.y) * dpr;
+      // above the car; if that hits another label (cars side by side), below it; else none
+      let y = Math.round(carY - off - img.height);
+      if (labelClash(n, x, y, img.width, img.height)) {
+        y = Math.round(carY + off);
+        if (labelClash(n, x, y, img.width, img.height)) continue;
+      }
+      if (n < MAX_ARROWS) {
+        labelBoxes[n * 4] = x;
+        labelBoxes[n * 4 + 1] = y;
+        labelBoxes[n * 4 + 2] = img.width;
+        labelBoxes[n * 4 + 3] = img.height;
+        n++;
+      }
+      ctx.globalAlpha = r.state === 'crashed' ? 0.5 : 1;
       ctx.drawImage(img, x, y);
     }
     ctx.globalAlpha = 1;
+  }
+
+  /** Whether a label box overlaps one of the first `n` drawn this frame (with a small gap). */
+  function labelClash(n: number, x: number, y: number, w: number, h: number): boolean {
+    const gap = 4 * dpr;
+    for (let j = 0; j < n; j++) {
+      const bx = labelBoxes[j * 4], by = labelBoxes[j * 4 + 1], bw = labelBoxes[j * 4 + 2], bh = labelBoxes[j * 4 + 3];
+      if (x < bx + bw + gap && bx < x + w + gap && y < by + bh && by < y + h) return true;
+    }
+    return false;
   }
 
   /**
@@ -234,6 +266,9 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
     const inset = NET.arrowInset;
     // screen point the arrows radiate from: the car in focus
     const ox = fx + cam.x, oy = fy + cam.y;
+    // with several rivals, say whose arrow it is
+    const named = rivals.length > 1;
+    let placedCount = 0;
     ctx.fillStyle = colors.rivalLabel;
     for (let i = 0; i < rivals.length; i++) {
       const r = rivals[i];
@@ -247,8 +282,44 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
       if (dx < 0) t = Math.min(t, (inset - ox) / dx);
       if (dy > 0) t = Math.min(t, (H - inset - oy) / dy);
       if (dy < 0) t = Math.min(t, (inset - oy) / dy);
-      const ax = ox + dx * t, ay = oy + dy * t;
-      const a = Math.atan2(dy, dx);
+      let ax = ox + dx * t, ay = oy + dy * t;
+      // gap text first: its size decides how far apart arrows on the same edge must be
+      const tx = textsOf(r);
+      const value = distanceScore(r.pose.i) - distanceScore(focusIndex);
+      if (tx.gapValue !== value || tx.gapNamed !== named) {
+        tx.gapValue = value;
+        tx.gapNamed = named;
+        const gap = value > 0 ? `+${value}` : value < 0 ? `-${-value}` : '0';
+        tx.gapText = named ? `${r.name} ${gap}` : gap;
+      }
+      const img = renderText(tx.gap, tx.gapText, colors.rivalLabel, dpr);
+      // two rivals in the same direction: slide this arrow along the edge, clear of the others
+      const onTopOrBottom = ay <= inset + 0.5 || ay >= H - inset - 0.5;
+      const needX = onTopOrBottom ? img.width / dpr + 12 : 0, needY = onTopOrBottom ? 0 : img.height / dpr + 14;
+      for (let tries = 0; tries < 4; tries++) {
+        let clash = false;
+        for (let j = 0; j < placedCount; j++) {
+          const px = placed[j * 2], py = placed[j * 2 + 1];
+          if (Math.abs(ax - px) < Math.max(needX, 20) && Math.abs(ay - py) < Math.max(needY, 20)) {
+            // move next to it on the side we're already on (the other side if off-screen)
+            if (onTopOrBottom) {
+              ax = ax >= px ? px + needX : px - needX;
+              if (ax > W - inset || ax < inset) ax = ax > px ? px - needX : px + needX;
+            } else {
+              ay = ay >= py ? py + needY : py - needY;
+              if (ay > H - inset || ay < inset) ay = ay > py ? py - needY : py + needY;
+            }
+            clash = true;
+          }
+        }
+        if (!clash) break;
+      }
+      if (placedCount < MAX_ARROWS) {
+        placed[placedCount * 2] = ax;
+        placed[placedCount * 2 + 1] = ay;
+        placedCount++;
+      }
+      const a = Math.atan2(sy - ay, sx - ax);
       const c = Math.cos(a), s = Math.sin(a);
       ctx.beginPath();
       ctx.moveTo(Math.round((ax + c * 9) * dpr), Math.round((ay + s * 9) * dpr));
@@ -256,14 +327,7 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
       ctx.lineTo(Math.round((ax - c * 6 + s * 8) * dpr), Math.round((ay - s * 6 - c * 8) * dpr));
       ctx.closePath();
       ctx.fill();
-      // gap, centred a little inside the arrow
-      const tx = textsOf(r);
-      const value = distanceScore(r.pose.i) - distanceScore(focusIndex);
-      if (tx.gapValue !== value) {
-        tx.gapValue = value;
-        tx.gapText = value > 0 ? `+${value}` : value < 0 ? `-${-value}` : '0';
-      }
-      const img = renderText(tx.gap, tx.gapText, colors.rivalLabel, dpr);
+      // gap, a little inside the arrow
       const gx = (ax - c * 18) * dpr - (img.width / 2) * (1 + c);
       const gy = (ay - s * 18) * dpr - (img.height / 2) * (1 + s);
       ctx.drawImage(img, Math.round(gx), Math.round(gy));

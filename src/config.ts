@@ -126,7 +126,7 @@ export const NET = {
   /** How fast the playback delay grows back after a fast arrival (ms per ms). */
   offsetCreep: 0.02,
   /** In a room, cars start this far apart sideways (px), centred on the road, so they don't overlap. */
-  startSpread: 36,
+  startSpread: 30,
   /** Off-screen arrow: distance from the screen edge (px). */
   arrowInset: 22,
   /** Debug bot (?debug&bot): fake network delay and its random spread (ms). */

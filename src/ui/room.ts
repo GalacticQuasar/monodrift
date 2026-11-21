@@ -151,7 +151,7 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
       : me?.ready
         ? `Waiting for ${others.filter(p => !p.ready).map(p => p.name).join(', ')}…`
         : others.every(p => p.ready)
-          ? `${others.map(p => p.name).join(', ')} is ready.`
+          ? `${others.map(p => p.name).join(', ')} ${others.length > 1 ? 'are' : 'is'} ready.`
           : 'Starts when everyone is ready.';
     const ready = button(alone ? 'Start' : results ? 'Again' : 'Ready', () => s.setReady(!me?.ready), { className: 'primary' });
     ready.setAttribute('aria-pressed', String(!!me?.ready));

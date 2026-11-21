@@ -74,7 +74,7 @@ no framework, canvas 2D. See `README.md` for the file layout.
   game loop, so hiding it counts as a crash mid-run, sits you out (0) in the countdown,
   and un-readies you between rounds. After crashing you watch the rival. Room runs are ranked like solo
   Normal runs; players without a leaderboard name are offered their room name on the
-  results card. Max 2 players (`ROOM.maxPlayers`).
+  results card. Max 4 players (`ROOM.maxPlayers`).
 - Dark mode: the Dark setting (Off by default / On / Auto follows the device) sets
   `data-theme` on `<html>` (`ui/theme.ts`; an inline script in `index.html` does it
   before first paint). The canvas uses `COLORS.light`/`COLORS.dark`, the DOM uses the
