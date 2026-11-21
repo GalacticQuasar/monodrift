@@ -85,7 +85,8 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - Car colour (Settings > Car, `CAR_COLORS` in `config.ts`): default (black, white at
   night) or a muted colour, each with light/dark values; the only colour besides the
   copper key. In a room others see it (`hello`/`color` messages); rivals who keep the
-  default are drawn grey (`rivalCar`) so they don't look like your car.
+  default are drawn grey (`rivalCar`) so they don't look like your car. "Vik green" is
+  a friend's pick; tapping its swatch `UI.vikTaps` times quickly shows "f l o r i d a".
 - Dark mode: the Dark setting (Off by default / On / Auto follows the device) sets
   `data-theme` on `<html>` (`ui/theme.ts`; an inline script in `index.html` does it
   before first paint). The canvas uses `COLORS.light`/`COLORS.dark`, the DOM uses the

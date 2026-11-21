@@ -1,7 +1,7 @@
 // Settings: the Settings button and its panel (road, zen, speed, steering mode,
 // sensitivity, trees, dark). Choices are saved in localStorage and apply right away.
 
-import { CAR_COLORS, INPUT, SPEED, type CarColor } from '../config';
+import { CAR_COLORS, INPUT, SPEED, UI, type CarColor } from '../config';
 import type { SteerMode } from '../input/input';
 import { DESKTOP } from '../lib/device';
 import { KEYS, storage } from '../lib/storage';
@@ -160,12 +160,29 @@ export function createSettings(
         refresh();
         onChange('car');
       });
+      if (id === 'vik') b.addEventListener('click', vikTap);
       swatches.append(b);
       return [id, b] as const;
     });
     refreshers.push(() => buttons.forEach(([id, b]) => b.setAttribute('aria-pressed', String(state.car === id))));
-    return el('div', { className: 'row' }, el('span', { className: 'label', textContent: 'Car' }), swatches);
+    return el('div', { className: 'row car-row' }, el('span', { className: 'label', textContent: 'Car' }), swatches, vikNote);
   }
+
+  // easter egg: tap Vik green UI.vikTaps times quickly
+  const vikNote = el('p', { className: 'vik-note', textContent: 'f l o r i d a', hidden: true });
+  let vikTaps: number[] = [];
+  function vikTap() {
+    const now = performance.now();
+    vikTaps = vikTaps.filter(t => now - t < UI.vikWindowMs);
+    vikTaps.push(now);
+    if (vikTaps.length < UI.vikTaps) return;
+    vikTaps = [];
+    vikNote.hidden = false;
+    vikNote.classList.remove('show');
+    void vikNote.offsetWidth; // restart the animation
+    vikNote.classList.add('show');
+  }
+  vikNote.addEventListener('animationend', () => (vikNote.hidden = true));
 
   /** Under the Speed row while Slow/Fast is picked, so the switch away from Normal is noticed. */
   const speedNote = el('p', { className: 'note speed-note', textContent: 'Not ranked: only Normal speed is.' });

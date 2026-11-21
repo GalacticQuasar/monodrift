@@ -91,6 +91,9 @@ export const UI = {
   eggRetryDelayMs: 1500,
   /** A still mouse cursor hides after this long (it also hides on key press or while steering). */
   cursorHideMs: 1500,
+  /** Easter egg: this many taps on the Vik green swatch within vikWindowMs... */
+  vikTaps: 10,
+  vikWindowMs: 3000,
   /** Rooms: the winner's trophy has the screen to itself this long before the results card comes up. */
   winShowMs: 3000,
   /** Phones get the "add to home screen" card on a menu screen from this many runs on. */
@@ -212,6 +215,8 @@ export const CAR_COLORS = [
   { id: 'red', name: 'Red', light: '#b0544c', dark: '#e2a39c' },
   { id: 'mustard', name: 'Mustard', light: '#a3862c', dark: '#ddc98a' },
   { id: 'green', name: 'Green', light: '#5c8752', dark: '#a7cd9a' },
+  // a friend's pick: near-black green by day (barely apart from the default), mint at night
+  { id: 'vik', name: 'Vik green', light: '#09110D', dark: '#a2cdb8' },
   { id: 'teal', name: 'Teal', light: '#3e827d', dark: '#95ccc7' },
   { id: 'blue', name: 'Blue', light: '#4e6ea6', dark: '#a0b7e2' },
   { id: 'purple', name: 'Purple', light: '#7a5a9c', dark: '#c4a9de' },

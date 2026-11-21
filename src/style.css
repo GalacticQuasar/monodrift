@@ -858,11 +858,11 @@ button:disabled {
 }
 @media (max-width: 380px) {
   #settings .swatches {
-    gap: 4px;
+    gap: 3px;
   }
   #settings button.swatch {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -969,4 +969,33 @@ button:disabled {
 }
 #room .setting + .setting {
   margin-top: 8px;
+}
+/* easter egg under the swatches (ui/settings.ts) */
+#settings .vik-note {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  text-align: right;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+#settings .vik-note[hidden] {
+  display: none;
+}
+#settings .vik-note.show {
+  animation: vik-note 2.6s ease-out both;
+}
+@keyframes vik-note {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  12%,
+  75% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
 }
