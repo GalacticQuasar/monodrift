@@ -178,7 +178,7 @@ describe('room: winning', () => {
   function round(ids: string[], win: 'furthest' | 'last', drivesOn = false) {
     const s = newRoom();
     for (const id of ids) joined(s, id);
-    send(s, ids[0], { t: 'rules', win, drivesOn, uncapped: false });
+    send(s, ids[0], { t: 'rules', win, drivesOn, uncapped: false, zen: false });
     for (const id of ids) send(s, id, { t: 'ready', ready: true });
     expect(s.phase).toBe('racing');
     return s;
@@ -220,7 +220,7 @@ describe('room: winning', () => {
     const s = newRoom();
     joined(s, 'a');
     joined(s, 'b');
-    const { out } = send(s, 'b', { t: 'rules', win: 'furthest', drivesOn: false, uncapped: true });
+    const { out } = send(s, 'b', { t: 'rules', win: 'furthest', drivesOn: false, uncapped: true, zen: false });
     expect(of(out, 'room')[0].msg.room.uncapped).toBe(true);
   });
 
@@ -234,13 +234,58 @@ describe('room: winning', () => {
 
   it('a new round clears the winner; rules only change between rounds', () => {
     const s = round(['a', 'b'], 'last');
-    expect(send(s, 'a', { t: 'rules', win: 'furthest', drivesOn: false, uncapped: false }).changed).toBe(false);
+    expect(send(s, 'a', { t: 'rules', win: 'furthest', drivesOn: false, uncapped: false, zen: false }).changed).toBe(false);
     crash(s, 'a', 1);
     crash(s, 'b', 2);
     expect(s.winner).toBe('b');
     send(s, 'a', { t: 'ready', ready: true });
     send(s, 'b', { t: 'ready', ready: true });
     expect(s).toMatchObject({ round: 2, winner: null });
+  });
+});
+
+describe('room: zen', () => {
+  function zenRound(ids: string[]) {
+    const s = newRoom();
+    for (const id of ids) joined(s, id);
+    send(s, ids[0], { t: 'rules', win: 'last', drivesOn: false, uncapped: false, zen: true });
+    for (const id of ids) send(s, id, { t: 'ready', ready: true });
+    expect(s).toMatchObject({ phase: 'racing', zen: true });
+    return s;
+  }
+  const done = (s: RoomState, id: string, d = true) => send(s, id, { t: 'done', r: s.round, done: d });
+
+  it('ends when everyone still driving taps Done, back to the lobby, nobody crowned', () => {
+    const s = zenRound(['a', 'b', 'c']);
+    done(s, 'a');
+    done(s, 'b');
+    done(s, 'b', false); // changed their mind
+    done(s, 'c');
+    expect(s.phase).toBe('racing');
+    const { out } = done(s, 'b');
+    expect(of(out, 'room')[0].msg.room).toMatchObject({ phase: 'lobby', winner: null });
+    expect(s.players.every(p => p.status === 'idle' && !p.done && !p.ready)).toBe(true);
+  });
+
+  it('a player out of the round (left, or tabbed away) doesn\'t hold it up', () => {
+    const s = zenRound(['a', 'b', 'c']);
+    send(s, 'c', { t: 'crash', r: 1, s: 10, score: 0 }); // hid the tab
+    done(s, 'a');
+    expect(s.phase).toBe('racing');
+    leave(s, 'b', ctx);
+    expect(s.phase).toBe('lobby');
+  });
+
+  it('no last-standing winner in zen, and Done means nothing outside zen', () => {
+    const s = zenRound(['a', 'b']);
+    send(s, 'a', { t: 'crash', r: 1, s: 10, score: 0 });
+    expect(s.winner).toBeNull();
+    const t = newRoom();
+    joined(t, 'a');
+    joined(t, 'b');
+    send(t, 'a', { t: 'ready', ready: true });
+    send(t, 'b', { t: 'ready', ready: true });
+    expect(done(t, 'a').changed).toBe(false);
   });
 });
 

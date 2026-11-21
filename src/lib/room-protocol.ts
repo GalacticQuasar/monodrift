@@ -7,7 +7,7 @@
 // each round and the results.
 
 /** Bump when messages change incompatibly: an older cached game is told to reload. */
-export const PROTOCOL = 3;
+export const PROTOCOL = 4;
 
 export const ROOM = {
   maxPlayers: 4,
@@ -62,6 +62,8 @@ export interface PlayerView {
   status: PlayerStatus;
   /** Score in the latest round (0 before the first). */
   score: number;
+  /** Zen round: has tapped Done (the round ends when everyone still driving has). */
+  done: boolean;
 }
 
 export interface RoomView {
@@ -79,6 +81,8 @@ export interface RoomView {
   drivesOn: boolean;
   /** Rounds without a top speed (sim Rules.uncapped); not ranked. */
   uncapped: boolean;
+  /** Zen rounds: no crashes, no score, no winner; they end when everyone taps Done. */
+  zen: boolean;
   /**
    * Id of the current/latest round's winner, or null (none yet, a tie, or a round with
    * one player). Last standing: set the moment one car is left; furthest: at the results.
@@ -94,11 +98,21 @@ export type ClientMsg =
   | { t: 'color'; color: string | null }
   | { t: 'ready'; ready: boolean }
   | { t: 'road'; road: RoadKind }
-  | { t: 'rules'; win: WinRule; drivesOn: boolean; uncapped: boolean }
+  | { t: 'rules'; win: WinRule; drivesOn: boolean; uncapped: boolean; zen: boolean }
+  /** Zen round `r`: done driving (or not, to take it back). */
+  | { t: 'done'; r: number; done: boolean }
   /** Pose samples for round `r` (lib/poses.ts packPoses). */
   | { t: 'pose'; r: number; d: number[] }
   /** Crashed in round `r` at sim step `s` with `score`. */
   | { t: 'crash'; r: number; s: number; score: number };
+
+/** The room settings that decide how rounds are played (all sent together). */
+export interface RoomRules {
+  win: WinRule;
+  drivesOn: boolean;
+  uncapped: boolean;
+  zen: boolean;
+}
 
 export type ErrorCode = 'version' | 'full' | 'no-room' | 'bad-message';
 
@@ -137,9 +151,11 @@ export function parseClientMsg(raw: unknown): ClientMsg | null {
     case 'ready':
       return typeof m.ready === 'boolean' ? { t: 'ready', ready: m.ready } : null;
     case 'rules':
-      return (m.win === 'furthest' || m.win === 'last') && typeof m.drivesOn === 'boolean' && typeof m.uncapped === 'boolean'
-        ? { t: 'rules', win: m.win, drivesOn: m.drivesOn, uncapped: m.uncapped }
+      return (m.win === 'furthest' || m.win === 'last') && typeof m.drivesOn === 'boolean' && typeof m.uncapped === 'boolean' && typeof m.zen === 'boolean'
+        ? { t: 'rules', win: m.win, drivesOn: m.drivesOn, uncapped: m.uncapped, zen: m.zen }
         : null;
+    case 'done':
+      return isInt(m.r, 1, 1e9) && typeof m.done === 'boolean' ? { t: 'done', r: m.r, done: m.done } : null;
     case 'road':
       return m.road === 'random' || m.road === 'daily' ? { t: 'road', road: m.road } : null;
     case 'pose':

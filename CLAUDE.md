@@ -86,7 +86,10 @@ no framework, canvas 2D. See `README.md` for the file layout.
   results card. Max 4 players (`ROOM.maxPlayers`).
 - Room win rule (room card, between rounds): Furthest (top score wins at the results; a
   tie crowns nobody) or Last standing (the last car left wins the moment the others are
-  out; the room picks whether it Stops or Drives on). Rounds driven alone crown nobody.
+  out; the room picks whether it Stops or Drives on). Rounds driven alone crown nobody. Zen (room setting):
+  no crashes, no score or winner, not ranked, Win rows hidden; a "Done" button
+  (`#done`, bottom centre) during the round, and it ends (back to the lobby) once
+  everyone still driving has tapped it.
   The winner gets the trophy (`ui/win.ts`, art in `src/art/trophy.json`, grey
   `--trophy-*` tokens) and the results card waits `UI.winShowMs`; others get a banner and
   the card title. Games send a keep-alive ping; the room drops connections silent for

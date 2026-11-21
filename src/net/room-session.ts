@@ -3,7 +3,7 @@
 // player's own pose samples. main.ts drives runs; ui/room.ts shows the room.
 
 import { packPoses, type PoseLog } from '../lib/poses';
-import { PING, PONG, PROTOCOL, ROOM, type ClientMsg, type ErrorCode, type RoadKind, type RoomView, type ServerMsg, type WinRule } from '../lib/room-protocol';
+import { PING, PONG, PROTOCOL, ROOM, type ClientMsg, type ErrorCode, type RoadKind, type RoomView, type RoomRules, type ServerMsg } from '../lib/room-protocol';
 import { createLiveRival, type LiveRival } from './rivals';
 
 /** connecting: first connection; open: in the room; reconnecting: lost it, trying again; failed: gave up (see `error`). */
@@ -21,8 +21,10 @@ export interface RoomSession {
   readonly rivals: LiveRival[];
   setReady(ready: boolean): void;
   setRoad(road: RoadKind): void;
-  /** How rounds are won, and whether they're Uncapped (between rounds). */
-  setRules(win: WinRule, drivesOn: boolean, uncapped: boolean): void;
+  /** How rounds are played (between rounds): send the whole set, changed. */
+  setRules(rules: RoomRules): void;
+  /** Zen round: done driving (or not, to take it back). */
+  setDone(done: boolean): void;
   /** The player picked another car colour (null: default). */
   setColor(color: string | null): void;
   /** The player's run for round `round` started: poses from `log` go out from sample 0. */
@@ -188,8 +190,11 @@ export function createRoomSession(code: string, name: string, color: string | nu
     setRoad(road) {
       send({ t: 'road', road });
     },
-    setRules(win, drivesOn, uncapped) {
-      send({ t: 'rules', win, drivesOn, uncapped });
+    setRules(rules) {
+      send({ t: 'rules', ...rules });
+    },
+    setDone(done) {
+      if (room) send({ t: 'done', r: room.round, done });
     },
     setColor(c) {
       color = c; // also for the hello after a reconnect

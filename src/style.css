@@ -1022,3 +1022,23 @@ button:disabled {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
+/* Zen room rounds: "Done" at the bottom (main.ts updateDoneButton) */
+#done {
+  position: fixed;
+  left: 50%;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  z-index: 2;
+  transform: translateX(-50%);
+  max-width: calc(100% - 40px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: var(--frame), inset -2px -2px var(--shade), 4px 4px 0 2px var(--shadow);
+}
+#done:active:not(:disabled) {
+  transform: translateX(-50%) translateY(1px);
+}
+#done[hidden] {
+  display: none;
+}

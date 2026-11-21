@@ -4,7 +4,7 @@
 
 import { DESKTOP } from '../lib/device';
 import { cleanName, nameProblem, NAME_MAX } from '../lib/names';
-import { isRoomCode, normalizeCode, ROOM, type RoadKind, type RoomView } from '../lib/room-protocol';
+import { isRoomCode, normalizeCode, ROOM, type RoadKind, type RoomRules, type RoomView } from '../lib/room-protocol';
 import type { RoomSession, SessionError } from '../net/room-session';
 import { trophyIcon } from './win';
 
@@ -120,14 +120,18 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
     return el('div', { className: 'setting' }, el('span', { className: 'label', textContent: label }), seg);
   }
 
-  /** Road, win rule and (last standing) what the winner does: anyone can change them between rounds. */
+  /** Road, speed, Zen, and (not Zen) how rounds are won: anyone can change them between rounds. */
   function settingRows(s: RoomSession, room: RoomView): HTMLElement[] {
+    const rules: RoomRules = { win: room.win, drivesOn: room.drivesOn, uncapped: room.uncapped, zen: room.zen };
+    const set = (change: Partial<RoomRules>) => s.setRules({ ...rules, ...change });
     const rows = [
       choiceRow<RoadKind>('Road', [['random', 'Random'], ['daily', 'Daily']], room.road, v => s.setRoad(v)),
-      choiceRow('Speed', [[false, 'Normal'], [true, 'Uncapped']] as const, room.uncapped, v => s.setRules(room.win, room.drivesOn, v)),
-      choiceRow('Win', [['furthest', 'Furthest'], ['last', 'Last standing']] as const, room.win, v => s.setRules(v, room.drivesOn, room.uncapped)),
+      choiceRow('Speed', [[false, 'Normal'], [true, 'Uncapped']] as const, room.uncapped, v => set({ uncapped: v })),
+      choiceRow('Zen', [[false, 'Off'], [true, 'On']] as const, room.zen, v => set({ zen: v })),
     ];
-    if (room.win === 'last') rows.push(choiceRow('Winner', [[false, 'Stops'], [true, 'Drives on']] as const, room.drivesOn, v => s.setRules('last', v, room.uncapped)));
+    if (room.zen) return rows; // nobody crashes, nobody wins
+    rows.push(choiceRow('Win', [['furthest', 'Furthest'], ['last', 'Last standing']] as const, room.win, v => set({ win: v })));
+    if (room.win === 'last') rows.push(choiceRow('Winner', [[false, 'Stops'], [true, 'Drives on']] as const, room.drivesOn, v => set({ drivesOn: v })));
     return rows;
   }
 

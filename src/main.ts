@@ -213,6 +213,25 @@ function tick(dt: number) {
   if (crashed) runEnded();
 }
 
+/** Zen room rounds: the "Done" button (tap when you've had enough; the round ends when everyone has). */
+const doneBtn = $<HTMLButtonElement>('#done');
+doneBtn.addEventListener('click', () => {
+  doneBtn.blur();
+  const me = session?.room?.players.find(p => p.id === session?.you);
+  if (me) session!.setDone(!me.done);
+});
+
+function updateDoneButton() {
+  const room = session?.room;
+  const me = room?.players.find(p => p.id === session?.you);
+  const show = !!room?.zen && room.phase === 'racing' && game.phase === 'run' && me?.status === 'racing';
+  doneBtn.hidden = !show;
+  if (!show || !room || !me) return;
+  const waiting = room.players.filter(p => p.status === 'racing' && !p.done && p.id !== me.id);
+  doneBtn.setAttribute('aria-pressed', String(me.done));
+  doneBtn.textContent = !me.done ? 'Done' : waiting.length ? `Waiting for ${waiting.map(p => p.name).join(', ')}` : 'Done';
+}
+
 /** Uncapped broke the sound barrier: a shockwave from the car, and the screen shakes. */
 function sonicBoom() {
   view.boom.x = game.car.x;
@@ -366,6 +385,7 @@ function leaveRoom() {
   roomAttempt++;
   session?.close();
   session = null;
+  updateDoneButton();
   countdown.goAt = 0;
   watching = false;
   view.rivals = botRivals;
@@ -392,6 +412,11 @@ function roomChanged() {
     if (room.phase === 'results' && game.phase === 'over') hud.hideMessage(); // the card shows the scores
     if (room.phase === 'racing' && game.phase === 'over') showRoomSpectating();
     showWinner(room);
+    if (room.phase !== 'racing' && game.phase === 'run') {
+      game.phase = 'over'; // a Zen round everyone finished: stop driving, back to the lobby card
+      hud.hideMessage();
+    }
+    updateDoneButton();
   }
   roomCard.render(session);
 }
@@ -462,16 +487,19 @@ function updateCountdown(now: number) {
   }
   countdown.goAt = 0;
   ROOM_RULES.uncapped = !!session.room?.uncapped;
-  // an Uncapped round can't be checked against the top speed, so it isn't ranked
-  startRun(countdown.seed, !ROOM_RULES.uncapped, countdown.daily, countdown.startX);
+  ROOM_RULES.crash = !session.room?.zen;
+  // an Uncapped round can't be checked against the top speed, and Zen has no score: not ranked
+  startRun(countdown.seed, !ROOM_RULES.uncapped && ROOM_RULES.crash, countdown.daily, countdown.startX);
   session.beginRun(countdown.round);
+  updateDoneButton();
   session.sendPoses(recorder.log); // the starting pose, so the others see the car right away
 }
 
 function roomRunEnded() {
   const score = game.score;
   session!.crashed(recorder.steps, score);
-  if (score > best) {
+  updateDoneButton();
+  if (ROOM_RULES.crash && score > best) {
     best = score;
     storage.set(bestKey(), String(best));
   }
@@ -552,7 +580,8 @@ startLoop({
     updateCountdown(now);
     updateFollow();
     renderer.draw(game, paused ? 1 : alpha, now, view); // paused: no stepping, so draw the last state exactly
-    hud.setScore(game.phase === 'ready' || watching || (settings.zen && !session) ? '' : String(game.score));
+    const zen = session ? !ROOM_RULES.crash : settings.zen;
+    hud.setScore(game.phase === 'ready' || watching || zen ? '' : String(game.score));
     if (!debug) return;
     counters.drawMs = performance.now() - t0;
     Object.assign(counters, renderer.stats);

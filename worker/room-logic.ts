@@ -29,6 +29,7 @@ export interface RoomState {
   win: WinRule;
   drivesOn: boolean;
   uncapped: boolean;
+  zen: boolean;
   winner: string | null;
   /** Players who started the current/latest round (a crown needs at least 2). */
   roundSize: number;
@@ -52,7 +53,7 @@ export interface Ctx {
 export const DEFAULT_NAME = 'Driver';
 
 export function createRoomState(code: string): RoomState {
-  return { code, created: false, phase: 'lobby', round: 0, road: 'random', seed: 0, daily: false, win: 'furthest', drivesOn: false, uncapped: false, winner: null, roundSize: 0, players: [] };
+  return { code, created: false, phase: 'lobby', round: 0, road: 'random', seed: 0, daily: false, win: 'furthest', drivesOn: false, uncapped: false, zen: false, winner: null, roundSize: 0, players: [] };
 }
 
 export function view(s: RoomState): RoomView {
@@ -66,6 +67,7 @@ export function view(s: RoomState): RoomView {
     win: s.win,
     drivesOn: s.drivesOn,
     uncapped: s.uncapped,
+    zen: s.zen,
     winner: s.winner,
     players: s.players.map(p => ({ ...p })),
   };
@@ -86,6 +88,7 @@ export function join(s: RoomState, id: string, name: string, version: number, co
     // arriving mid-round: watch it, drive the next one
     status: s.phase === 'racing' ? 'watching' : 'idle',
     score: 0,
+    done: false,
   });
   return { out: [{ only: id, msg: { t: 'welcome', you: id, room: view(s) } }, { except: id, msg: { t: 'room', room: view(s) } }] };
 }
@@ -129,11 +132,17 @@ export function handle(s: RoomState, id: string, msg: ClientMsg, ctx: Ctx): { ou
       return { out: [...maybeStart(s, ctx), snapshot(s)], changed: true };
 
     case 'rules':
-      if (s.phase === 'racing' || (s.win === msg.win && s.drivesOn === msg.drivesOn && s.uncapped === msg.uncapped)) break;
+      if (s.phase === 'racing' || (s.win === msg.win && s.drivesOn === msg.drivesOn && s.uncapped === msg.uncapped && s.zen === msg.zen)) break;
       s.win = msg.win;
       s.drivesOn = msg.drivesOn;
       s.uncapped = msg.uncapped;
+      s.zen = msg.zen;
       return { out: [snapshot(s)], changed: true };
+
+    case 'done':
+      if (!s.zen || s.phase !== 'racing' || msg.r !== s.round || p.status !== 'racing' || p.done === msg.done) break;
+      p.done = msg.done;
+      return { out: [...endRoundIfDone(s), ...maybeStart(s, ctx), snapshot(s)], changed: true };
 
     case 'road':
       if (s.phase === 'racing' || s.road === msg.road) break;
@@ -160,6 +169,16 @@ export function handle(s: RoomState, id: string, msg: ClientMsg, ctx: Ctx): { ou
 function endRoundIfDone(s: RoomState): Out[] {
   if (s.phase !== 'racing') return [];
   const racing = s.players.filter(p => p.status === 'racing');
+  if (s.zen) {
+    // Zen: over once everyone still driving has tapped Done; back to the lobby, no winner
+    if (racing.some(p => !p.done)) return [];
+    s.phase = 'lobby';
+    for (const p of s.players) {
+      p.status = 'idle';
+      p.done = false;
+    }
+    return [];
+  }
   if (s.win === 'last' && !s.winner && s.roundSize >= 2 && racing.length === 1) s.winner = racing[0].id;
   if (racing.length) return [];
   s.phase = 'results';
@@ -183,6 +202,7 @@ function maybeStart(s: RoomState, ctx: Ctx): Out[] {
     p.ready = false;
     p.status = 'racing';
     p.score = 0;
+    p.done = false;
   }
   return [{ msg: { t: 'start', r: s.round, seed: s.seed, daily: s.daily, inMs: ROOM.countdownMs } }];
 }
