@@ -17,5 +17,11 @@
       "migrations_dir": "migrations",
     },
   ],
+  // multiplayer rooms: one Durable Object per room code (worker/room.ts); SQLite-backed,
+  // as the free plan requires. `wrangler deploy` applies the migrations below itself.
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "Room" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
   // TICKET_SECRET: set with `npx wrangler secret put TICKET_SECRET` (locally: .dev.vars)
 }

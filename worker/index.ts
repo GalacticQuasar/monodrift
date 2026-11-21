@@ -6,6 +6,9 @@
 //   PATCH /api/players/me   {name}          -> {name}              rename (auth)
 //   POST  /api/scores       {ticket, score} -> {all, day?}         end of a run (auth)
 //   GET   /api/leaderboard?board=all|today  -> {board, day, top, me}
+//   POST  /api/rooms                        -> {code}               new multiplayer room
+//   GET   /api/rooms/:code                  -> {open, players, full}
+//   GET   /api/rooms/:code/ws               WebSocket into the room (src/lib/room-protocol.ts)
 //
 // Auth: "Authorization: Bearer <id>.<token>", the secret the device got with its name.
 
@@ -13,13 +16,11 @@ import { dailySeed, utcDay } from '../src/sim/daily';
 import { maxScoreAfter } from '../src/sim/scoring';
 import { cleanName, nameProblem } from '../src/lib/names';
 import { randomId, sha256, signTicket, verifyTicket, type Ticket } from './tickets';
+import type { Env } from './env';
+import { roomRoute } from './rooms';
 
-interface Env {
-  DB: D1Database;
-  ASSETS: Fetcher;
-  /** HMAC key for run tickets (wrangler secret / .dev.vars). */
-  TICKET_SECRET: string;
-}
+export { Room } from './room';
+
 
 /** Added to the measured run time: network delay before the ticket was issued. */
 const SLACK_S = 3;
@@ -185,6 +186,7 @@ export default {
     const url = new URL(req.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
     try {
+      if (url.pathname === '/api/rooms' || url.pathname.startsWith('/api/rooms/')) return await roomRoute(req, env, url);
       const route = `${req.method} ${url.pathname}`;
       switch (route) {
         case 'POST /api/tickets':

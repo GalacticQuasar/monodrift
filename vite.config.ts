@@ -136,5 +136,6 @@ export default defineConfig({
   // the leaderboard API runs in `npx wrangler dev` (local Worker + local database)
   // tests read style.css (?raw) to check colour tokens; Vitest blanks CSS otherwise
   test: { css: { include: [/style\.css/] } },
-  server: { proxy: { '/api': 'http://localhost:8787' } },
+  // ws: multiplayer rooms are WebSockets under /api/rooms
+  server: { proxy: { '/api': { target: 'http://localhost:8787', ws: true } } },
 });
