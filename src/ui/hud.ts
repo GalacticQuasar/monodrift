@@ -57,14 +57,37 @@ export interface Hud {
   showPaused(): void;
   /** Adds the leaderboard line (e.g. "#3 today · #12 all-time") under a game-over message. */
   showRank(text: string): void;
+  /** Room round about to start: 3, 2, 1. */
+  showCountdown(n: number): void;
+  /** Room: crashed with `score`; watching `name` drive on (null: waiting for the results). */
+  showSpectating(score: number, name: string | null): void;
+  /** Room: joined mid-round, watching `name` until the next one. */
+  showWatching(name: string | null): void;
+  /**
+   * The "Drive with a friend" link under start/game-over messages from now on
+   * (null: none, e.g. while in a room). Doesn't redraw the current message.
+   */
+  setFriendLink(onClick: (() => void) | null): void;
   hideMessage(): void;
 }
 
 export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
   let shownScore: string | null = null;
+  let onFriend: (() => void) | null = null;
+  const friend = document.createElement('button');
+  friend.type = 'button';
+  friend.className = 'friend link';
+  friend.textContent = 'Drive with a friend';
+  // its own pointer/key handling: a tap here mustn't also start a run
+  friend.addEventListener('pointerdown', e => e.stopPropagation());
+  friend.addEventListener('keydown', e => e.stopPropagation());
+  friend.addEventListener('click', () => {
+    friend.blur();
+    onFriend?.();
+  });
 
   /** `extra`: nodes between the title and the text lines (keycaps, edge chevrons). */
-  function message(title: string, lines: string[], hintDelayMs = 0, extra: Node[] = []) {
+  function message(title: string, lines: string[], hintDelayMs = 0, extra: Node[] = [], withFriend = false) {
     const b = document.createElement('b');
     b.textContent = title;
     const span = document.createElement('span');
@@ -77,6 +100,11 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
       span.style.animationDelay = `${hintDelayMs}ms`;
     }
     msgEl.replaceChildren(b, ...extra, span);
+    if (withFriend && onFriend) {
+      friend.className = hintDelayMs > 0 ? 'friend link later' : 'friend link';
+      friend.style.animationDelay = `${hintDelayMs}ms`;
+      msgEl.append(friend);
+    }
   }
 
   return {
@@ -97,10 +125,11 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
           : [...help, 'stay on the road', ...(pace ? [`${pace} speed · not ranked`] : []), `${PRESS} to start`],
         0,
         DESKTOP ? [keysRow()] : edges ? chevrons() : [],
+        true,
       );
     },
     showGameOver(score, best, hintDelayMs) {
-      message(String(score), [`best ${best} · ${PRESS} to retry`], hintDelayMs);
+      message(String(score), [`best ${best} · ${PRESS} to retry`], hintDelayMs, [], true);
     },
     showPaused() {
       message('Paused', [`${PRESS} to resume`]);
@@ -109,7 +138,21 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
       const line = document.createElement('span');
       line.className = 'rank';
       line.textContent = text;
-      msgEl.append(line);
+      if (friend.parentNode === msgEl) msgEl.insertBefore(line, friend);
+      else msgEl.append(line);
+    },
+    showCountdown(n) {
+      message(String(n), ['get ready']);
+    },
+    showSpectating(score, name) {
+      message(String(score), [name ? `watching ${name}` : 'waiting for the results']);
+    },
+    showWatching(name) {
+      message('Watching', [name ? `${name} is driving · you're in the next round` : "you're in the next round"]);
+    },
+    setFriendLink(fn) {
+      onFriend = fn;
+      if (!fn) friend.remove();
     },
     hideMessage() {
       msgEl.replaceChildren();

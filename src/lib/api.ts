@@ -56,7 +56,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new ApiError(0, "can't reach the leaderboard");
+    throw new ApiError(0, path.startsWith('rooms') ? "can't reach the server" : "can't reach the leaderboard");
   }
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new ApiError(res.status, data.error ?? 'something went wrong');
@@ -83,5 +83,9 @@ export const api = {
   },
   board(which: 'today' | 'all'): Promise<Board> {
     return call<Board>('GET', `leaderboard?board=${which}`);
+  },
+  /** A new multiplayer room; returns its code. */
+  async createRoom(): Promise<string> {
+    return (await call<{ code: string }>('POST', 'rooms')).code;
   },
 };

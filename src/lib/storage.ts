@@ -25,6 +25,8 @@ export const KEYS = {
   dark: 'monodrift-dark',
   /** Id of the newest patch notes the player has seen (card shown, or /updates opened). Also set in updates.html. */
   notesSeen: 'monodrift-notes-seen',
+  /** Name in multiplayer rooms, for players without a leaderboard name. */
+  roomName: 'monodrift-room-name',
 } as const;
 
 export const storage = {

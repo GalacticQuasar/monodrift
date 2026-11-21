@@ -711,3 +711,87 @@ button:disabled {
   background: none;
   box-shadow: none;
 }
+
+/* ---- multiplayer: "Drive with a friend" link (ui/hud.ts) and the room card (ui/room.ts) ---- */
+
+#msg .friend {
+  display: block;
+  margin: 14px auto 0;
+  padding: 4px 6px;
+  font: 14px var(--pixel);
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  box-shadow: none;
+  pointer-events: auto; /* #msg itself lets taps through to the game */
+}
+#msg .friend.later {
+  animation: msg-fade-in 0.2s ease-out both;
+}
+#room .head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+#room .close {
+  margin: -6px -6px -6px 0;
+  padding: 0 6px;
+  font: 28px/1 var(--sans);
+  background: none;
+  box-shadow: none;
+}
+#room .players {
+  list-style: none;
+  margin: 10px 0;
+  padding: 2px 0;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+#room .players li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px;
+}
+#room .players li.me {
+  font-weight: 600;
+}
+#room .players .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#room .players .state {
+  font-variant-numeric: tabular-nums;
+}
+#room .players .dot {
+  width: 10px;
+  height: 10px;
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+#room .players .dot.on {
+  background: var(--ink);
+}
+#room .road {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+#room .road .label {
+  font: 14px var(--pixel);
+}
+#room .road .seg {
+  display: flex;
+  gap: 6px;
+}
+#room .road .seg button {
+  padding: 5px 10px 4px;
+  font-size: 14px;
+}
+#room p {
+  margin: 10px 0 12px;
+}

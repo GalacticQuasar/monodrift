@@ -5,7 +5,10 @@ import { DESKTOP } from './lib/device';
 import { KEYS, storage } from './lib/storage';
 import { startLoop } from './loop';
 import { ALL_LAYERS, createRenderer, type View } from './render/renderer';
-import { api } from './lib/api';
+import { api, ApiError, player } from './lib/api';
+import { isRoomCode, normalizeCode } from './lib/room-protocol';
+import { createRoomSession, type RoomSession } from './net/room-session';
+import { createRoomCard } from './ui/room';
 import { createRunRecorder } from './lib/run-recorder';
 import { createBot } from './net/bot';
 import type { Rival } from './net/rivals';
@@ -38,9 +41,9 @@ const debug = createDebug();
 const recorder = createRunRecorder();
 /** Debug rival on the player's road (?debug&bot). */
 const bot = debug && new URLSearchParams(location.search).has('bot') ? createBot() : null;
-const rivals: Rival[] = bot ? [bot.rival] : [];
-/** Other cars for the renderer (reused every frame). */
-const view: View = { rivals, follow: null };
+const botRivals: Rival[] = bot ? [bot.rival] : [];
+/** Other cars for the renderer (reused every frame): the room's rivals while in one. */
+const view: View = { rivals: botRivals, follow: null };
 autoHideCursor();
 const install = createInstallPrompt($('#install'));
 const news = createNews($('#news'), __LATEST_NOTES__);
@@ -54,8 +57,8 @@ const leaderboard = createLeaderboard({
   },
 });
 
-/** Local best is kept per speed, so Slow runs don't set the Normal best. */
-const bestKey = () => (settings.speed === 'normal' ? KEYS.best : `${KEYS.best}-${settings.speed}`);
+/** Local best is kept per speed, so Slow runs don't set the Normal best (room runs are Normal). */
+const bestKey = () => (session || settings.speed === 'normal' ? KEYS.best : `${KEYS.best}-${settings.speed}`);
 const loadBest = () => Number(storage.get(bestKey())) || 0;
 /** performance.now() before which a tap won't start a new run. */
 let retryAllowedAt = 0;
@@ -63,6 +66,14 @@ let retryAllowedAt = 0;
 let paused = false;
 /** Leaderboard ticket for the current run (null: zen, not Normal speed, or offline when it started). */
 let ticket: Promise<string | null> = Promise.resolve(null);
+/** The room the player is in, if any (?room=CODE in the URL while in one). */
+let session: RoomSession | null = null;
+/** Room round counting down: performance.now() when it goes (0: none), and its details. */
+let countdown = { goAt: 0, round: 0, seed: 0, daily: false, shown: 0 };
+/** In a room but not in the current round (joined mid-round, or lost the connection). */
+let watching = false;
+/** Counts "Drive with a friend" attempts, so one abandoned meanwhile is dropped. */
+let roomAttempt = 0;
 
 function showReady() {
   paused = false;
@@ -70,6 +81,11 @@ function showReady() {
   egg.hide();
   bot?.stop();
   game = createGame(roadSeed());
+  if (session) {
+    // in a room: its card is the menu; rounds start from the room
+    hud.hideMessage();
+    return;
+  }
   showStart();
   menuCards();
 }
@@ -95,14 +111,15 @@ const settings = createSettings($('#settings-btn'), $('#settings'), changed => {
     updateTheme();
   }
 }, open => {
-  if (open && game.phase === 'run') {
+  // a room run isn't paused: everyone else keeps driving
+  if (open && game.phase === 'run' && !session) {
     paused = true;
     input.clear();
     debug?.event('pause');
   } else if (!open && paused) {
     hud.showPaused(); // resuming the moment the panel closes would crash the car before you're ready
   }
-});
+}, () => (session ? leaveRoom() : startRoom()));
 
 const updateTheme = watchTheme(
   () => settings.dark,
@@ -134,32 +151,48 @@ const input = createInput(canvas, {
       return true;
     }
     if (game.phase === 'run') return false;
+    if (session || roomCard.shown) return true; // rounds start from the room, not a tap
     if (performance.now() < retryAllowedAt) return true; // swallow the tap
     // from the start screen, drive the road already on screen; a retry gets a new one
-    game = createGame(game.phase === 'ready' ? game.seed : roadSeed(), 'run');
-    recorder.start(game);
-    bot?.start(game.seed);
-    // the server times the run from here, which caps the score it will accept
-    best = loadBest();
-    ticket = settings.zen || settings.speed !== 'normal' ? Promise.resolve(null) : api.ticket(game.seed, settings.daily).catch(() => null);
-    hud.hideMessage();
-    egg.hide();
-    install.runStarted();
-    news.hide();
-    leaderboard.runStarted();
-    debug?.event('start');
+    const ranked = !settings.zen && settings.speed === 'normal';
+    startRun(game.phase === 'ready' ? game.seed : roadSeed(), ranked, settings.daily);
     return true;
   },
 });
 
+/** Start driving road `seed`. `ranked`: get a leaderboard ticket (Normal speed, no zen). */
+function startRun(seed: number, ranked: boolean, daily: boolean) {
+  game = createGame(seed, 'run');
+  recorder.start(game);
+  bot?.start(game.seed);
+  // the server times the run from here, which caps the score it will accept
+  best = loadBest();
+  ticket = ranked ? api.ticket(game.seed, daily).catch(() => null) : Promise.resolve(null);
+  hud.hideMessage();
+  egg.hide();
+  install.runStarted();
+  news.hide();
+  leaderboard.runStarted();
+  debug?.event('start');
+}
+
+/** Room rounds: Normal speed, crashes on, whatever the player's settings say. */
+const ROOM_RULES = { crash: true, speed: 1 };
+
 function tick(dt: number) {
   if (paused) return;
-  const rules = { crash: !settings.zen, speed: SPEED[settings.speed] };
+  const rules = session ? ROOM_RULES : { crash: !settings.zen, speed: SPEED[settings.speed] };
   bot?.tick(dt, rules);
   if (game.phase !== 'run') return;
   const crashed = step(game, input.intent(), dt, rules) === 'crash';
   recorder.record(game, crashed);
-  if (!crashed) return;
+  session?.sendPoses(recorder.log);
+  if (crashed) runEnded();
+}
+
+/** The run is over (crashed, or a room run cut short). */
+function runEnded() {
+  if (session) return roomRunEnded();
   const backwards = crashedAtStart(game);
   const retryDelay = backwards ? UI.eggRetryDelayMs : UI.retryDelayMs;
   retryAllowedAt = performance.now() + retryDelay;
@@ -183,11 +216,164 @@ function tick(dt: number) {
 
 /** After the player crashes, the camera follows a rival still racing (spectating). */
 function updateFollow() {
-  const f = game.phase === 'over' ? (rivals.find(r => r.state === 'racing') ?? null) : null;
+  const prev = view.follow;
+  const f = game.phase === 'over' ? (view.rivals.find(r => r.state === 'racing') ?? null) : null;
   view.follow = f;
   // the road ahead of them may not exist yet: it's only generated around the player
   if (f) extendTrack(game.track, f.pose.i + TRACK.pointsAhead);
+  if (session && f !== prev && game.phase === 'over' && session.room?.phase === 'racing') showRoomSpectating();
 }
+
+// ---- multiplayer rooms ----
+
+
+const roomCard = createRoomCard($('#room'), {
+  ready: r => session?.setReady(r),
+  road: r => session?.setRoad(r),
+  leave: () => leaveRoom(),
+  retryCreate: () => startRoom(),
+});
+
+/** "Drive with a friend": make a room, then join it. */
+async function startRoom() {
+  if (session) return;
+  const attempt = ++roomAttempt;
+  hideMenuCards();
+  hud.hideMessage();
+  roomCard.showCreating();
+  try {
+    const code = await api.createRoom();
+    if (attempt !== roomAttempt) return; // closed the card meanwhile
+    history.replaceState(null, '', `?${roomParam(code)}`);
+    joinRoom(code);
+  } catch (e) {
+    if (attempt === roomAttempt) roomCard.showCreateFailed(e instanceof ApiError ? e.message : 'something went wrong');
+  }
+}
+
+/** The URL's query string with ?room= set to `code` (other params, like debug, kept). */
+function roomParam(code: string | null): string {
+  const q = new URLSearchParams(location.search);
+  if (code) q.set('room', code);
+  else q.delete('room');
+  return q.toString().replace(/=(?=&|$)/g, ''); // ?debug, not ?debug=
+}
+
+function joinRoom(code: string) {
+  const name = player()?.name ?? storage.get(KEYS.roomName);
+  hideMenuCards();
+  if (!name) {
+    hud.hideMessage();
+    roomCard.askName('', n => {
+      storage.set(KEYS.roomName, n);
+      joinRoom(code);
+    });
+    return;
+  }
+  session?.close();
+  session = createRoomSession(code, name, { onChange: roomChanged, onStart: roundStarting });
+  view.rivals = session.rivals;
+  bot?.stop();
+  settings.setInRoom(true);
+  hud.setFriendLink(null);
+  watching = false;
+  if (game.phase === 'run') game.phase = 'over'; // can't carry a solo run into the room
+  showReady();
+  roomChanged();
+}
+
+function leaveRoom() {
+  roomAttempt++;
+  session?.close();
+  session = null;
+  countdown.goAt = 0;
+  watching = false;
+  view.rivals = botRivals;
+  view.follow = null;
+  settings.setInRoom(false);
+  hud.setFriendLink(startRoom);
+  roomCard.hide();
+  history.replaceState(null, '', location.pathname + (roomParam(null) ? `?${roomParam(null)}` : ''));
+  showReady();
+}
+
+/** The room changed (players, phase, connection): update the card and the messages. */
+function roomChanged() {
+  if (!session) return;
+  const room = session.room;
+  if (session.status === 'open' && room) {
+    const me = room.players.find(p => p.id === session!.you);
+    if (room.phase === 'racing' && me?.status === 'watching' && !watching && game.phase !== 'run' && !countdown.goAt) {
+      // joined mid-round: watch it on its road
+      watching = true;
+      game = createGame(room.seed, 'over');
+    }
+    if (room.phase !== 'racing') watching = false;
+    if (room.phase === 'results' && game.phase === 'over') hud.hideMessage(); // the card shows the scores
+    if (room.phase === 'racing' && game.phase === 'over') showRoomSpectating();
+  }
+  roomCard.render(session);
+}
+
+function roundStarting(round: number, seed: number, daily: boolean, inMs: number) {
+  if (game.phase === 'run') game.phase = 'over'; // shouldn't happen; never drive two rounds at once
+  watching = false;
+  paused = false;
+  input.clear();
+  egg.hide();
+  game = createGame(seed); // the road, on screen during the countdown
+  countdown = { goAt: performance.now() + inMs, round, seed, daily, shown: 0 };
+  hideMenuCards();
+}
+
+/** Called every frame: count down, and start the round when it's time. */
+function updateCountdown(now: number) {
+  if (!countdown.goAt || !session) return;
+  const left = countdown.goAt - now;
+  if (left > 0) {
+    const n = Math.ceil(left / 1000);
+    if (n !== countdown.shown) hud.showCountdown((countdown.shown = n));
+    return;
+  }
+  countdown.goAt = 0;
+  startRun(countdown.seed, true, countdown.daily);
+  session.beginRun(countdown.round);
+  session.sendPoses(recorder.log); // the starting pose, so the others see the car right away
+}
+
+function roomRunEnded() {
+  const score = game.score;
+  session!.crashed(recorder.steps, score);
+  if (score > best) {
+    best = score;
+    storage.set(bestKey(), String(best));
+  }
+  showRoomSpectating();
+  // ranked like a solo Normal run; without a name, no "pick a name" card in a room
+  if (player()) leaderboard.runEnded(ticket, score, () => {});
+  debug?.event('crash (room)');
+}
+
+/** The player's own round is over (or they're watching one): say who's still driving. */
+function showRoomSpectating() {
+  if (session?.room?.phase !== 'racing') return;
+  const name = view.follow?.name ?? null;
+  if (watching) hud.showWatching(name);
+  else hud.showSpectating(game.score, name);
+}
+
+function hideMenuCards() {
+  install.hide();
+  news.hide();
+}
+
+// a room run can't pause: switching away from the game counts as a crash
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && session && game.phase === 'run') {
+    game.phase = 'over';
+    runEnded();
+  }
+});
 
 // debug timing (only with ?debug); reused object so measuring makes no garbage
 const counters = { steps: 0, simMs: 0, drawMs: 0, trees: 0, cellsGenerated: 0, cellsEvicted: 0, skids: 0 };
@@ -205,9 +391,11 @@ startLoop({
   render(alpha, now) {
     const t0 = debug ? performance.now() : 0;
     bot?.update(now);
+    session?.update(now);
+    updateCountdown(now);
     updateFollow();
     renderer.draw(game, paused ? 1 : alpha, now, view); // paused: no stepping, so draw the last state exactly
-    hud.setScore(game.phase === 'ready' || settings.zen ? '' : String(game.score));
+    hud.setScore(game.phase === 'ready' || watching || (settings.zen && !session) ? '' : String(game.score));
     if (!debug) return;
     counters.drawMs = performance.now() - t0;
     Object.assign(counters, renderer.stats);
@@ -218,10 +406,16 @@ startLoop({
   },
 });
 
-showStart();
-menuCards();
+hud.setFriendLink(startRoom);
+const linkedRoom = normalizeCode(new URLSearchParams(location.search).get('room') ?? '');
+if (isRoomCode(linkedRoom)) {
+  joinRoom(linkedRoom);
+} else {
+  showStart();
+  menuCards();
+}
 // beforeinstallprompt usually arrives shortly after load, so check again then
-addEventListener('load', () => setTimeout(() => game.phase === 'ready' && menuCards(), 1000));
+addEventListener('load', () => setTimeout(() => game.phase === 'ready' && !session && !roomCard.shown && menuCards(), 1000));
 
 // offline support (see src/sw.js); production only, the dev server's files change constantly
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

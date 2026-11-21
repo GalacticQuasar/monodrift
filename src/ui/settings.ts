@@ -30,6 +30,11 @@ const parseSpeed = (v: string | null): Speed => (v === 'slow' || v === 'fast' ? 
 export interface SettingsPanel extends Settings {
   /** True while the panel is open (game input should be ignored). */
   readonly open: boolean;
+  /**
+   * In a multiplayer room (true): the room picks the road and the rules, so Road, Zen
+   * and Speed are locked, and the Friends row offers to leave instead of invite.
+   */
+  setInRoom(inRoom: boolean): void;
 }
 
 const LEVELS = INPUT.sensitivity.length;
@@ -56,6 +61,8 @@ export function createSettings(
   onChange: (setting: keyof Settings) => void,
   /** The panel opened (true) or closed (false). */
   onOpenChange: (open: boolean) => void,
+  /** The Friends row's button: start a room, or leave the one you're in. */
+  onFriends: () => void,
 ): SettingsPanel {
   const state = {
     mode: (storage.get(KEYS.mode) === 'drag' ? 'drag' : 'sides') as SteerMode,
@@ -67,6 +74,7 @@ export function createSettings(
     dark: parseDark(storage.get(KEYS.dark)),
   };
   let isOpen = false;
+  let inRoom = false;
 
   /** Updates the controls to match `state` (set by each row below). */
   const refreshers: (() => void)[] = [];
@@ -88,6 +96,24 @@ export function createSettings(
     refreshers.push(() => buttons.forEach(([value, b]) => b.setAttribute('aria-pressed', String(get() === value))));
     return el('div', { className: 'row' }, el('span', { className: 'label', textContent: label }), seg);
   }
+
+  /** Rows the room decides while you're in one. */
+  const roomLocked: HTMLElement[] = [];
+  const locked = (row: HTMLElement) => {
+    roomLocked.push(row);
+    return row;
+  };
+  refreshers.push(() => {
+    for (const row of roomLocked) for (const b of row.querySelectorAll('button')) b.disabled = inRoom;
+  });
+
+  const friendsBtn = el('button', { type: 'button' });
+  friendsBtn.addEventListener('click', () => {
+    close();
+    onFriends();
+  });
+  refreshers.push(() => (friendsBtn.textContent = inRoom ? 'Leave room' : 'Invite'));
+  const friendsRow = el('div', { className: 'row' }, el('span', { className: 'label', textContent: 'Friends' }), el('div', { className: 'seg' }, friendsBtn));
 
   function sensitivityRow(): HTMLElement {
     const less = el('button', { type: 'button', className: 'step', textContent: '-', ariaLabel: 'Less sensitive' });
@@ -115,51 +141,58 @@ export function createSettings(
 
   /** Under the Speed row while Slow/Fast is picked, so the switch away from Normal is noticed. */
   const speedNote = el('p', { className: 'note speed-note', textContent: 'Not ranked: only Normal speed is.' });
-  refreshers.push(() => (speedNote.hidden = state.speed === 'normal'));
+  refreshers.push(() => (speedNote.hidden = state.speed === 'normal' || inRoom));
 
   const closeBtn = el('button', { type: 'button', className: 'close', textContent: '×', ariaLabel: 'Close' });
   closeBtn.addEventListener('click', close);
 
   const rows = [
-    choice(
-      'Road',
-      [
-        [true, 'Daily'],
-        [false, 'Random'],
-      ],
-      () => state.daily,
-      v => {
-        state.daily = v;
-        storage.set(KEYS.road, v ? 'daily' : 'random');
-        onChange('daily');
-      },
+    friendsRow,
+    locked(
+      choice(
+        'Road',
+        [
+          [true, 'Daily'],
+          [false, 'Random'],
+        ],
+        () => state.daily,
+        v => {
+          state.daily = v;
+          storage.set(KEYS.road, v ? 'daily' : 'random');
+          onChange('daily');
+        },
+      ),
     ),
-    choice(
-      'Zen',
-      [
-        [false, 'Off'],
-        [true, 'On'],
-      ],
-      () => state.zen,
-      v => {
-        state.zen = v;
-        storage.set(KEYS.zen, v ? 'on' : 'off');
-        onChange('zen');
-      },
+    locked(
+      choice(
+        'Zen',
+        [
+          [false, 'Off'],
+          [true, 'On'],
+        ],
+        () => state.zen,
+        v => {
+          state.zen = v;
+          storage.set(KEYS.zen, v ? 'on' : 'off');
+          onChange('zen');
+        },
+      ),
     ),
-    choice<Speed>(
-      'Speed',
-      [
-        ['slow', 'Slow'],
-        ['normal', 'Normal'],
-        ['fast', 'Fast'],
-      ],
-      () => state.speed,
-      v => {
-        state.speed = v;
-        storage.set(KEYS.speed, v);
-        onChange('speed');
-      },
+    locked(
+      choice<Speed>(
+        'Speed',
+        [
+          ['slow', 'Slow'],
+          ['normal', 'Normal'],
+          ['fast', 'Fast'],
+        ],
+        () => state.speed,
+        v => {
+          state.speed = v;
+          storage.set(KEYS.speed, v);
+          onChange('speed');
+        },
+      ),
     ),
     speedNote,
     // desktop steers with the keyboard only, so the touch steering mode doesn't apply
@@ -210,12 +243,15 @@ export function createSettings(
     ),
   ];
 
+  const footNote = el('p', { className: 'note' });
+  refreshers.push(() => (footNote.textContent = inRoom ? 'In a room, it picks the road: Normal speed, no Zen.' : 'Changing Road, Zen or Speed starts over.'));
+
   const box = el(
     'div',
     { className: 'box', role: 'dialog', ariaModal: 'true', ariaLabel: 'Settings' },
     el('div', { className: 'head' }, el('b', { textContent: 'Settings' }), closeBtn),
     el('div', { className: 'rows' }, ...rows),
-    el('div', { className: 'foot' }, el('p', { className: 'note', textContent: 'Changing Road, Zen or Speed starts over.' }), el('a', { href: '/updates', textContent: "What's new" })),
+    el('div', { className: 'foot' }, footNote, el('a', { href: '/updates', textContent: "What's new" })),
   );
   panel.replaceChildren(box);
   refresh();
@@ -267,6 +303,10 @@ export function createSettings(
     },
     get open() {
       return isOpen;
+    },
+    setInRoom(v) {
+      inRoom = v;
+      refresh();
     },
   };
 }
