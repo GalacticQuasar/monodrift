@@ -5,6 +5,17 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-21 (11)
+
+- Covers: `6933327` to `5f020bd` (Zen rooms; vapor cone tweak left out)
+- Last commit: `5f020bd`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Zen rooms**: turn on Zen in a room to just drive around together. Nobody crashes and there's no score. Tap Done when you've had enough, and the round ends once everyone has
+
 ## 2026-11-21 (10)
 
 - Covers: `5b75186` to `3d42c96` (linear Uncapped speed, gentler bends; vapor cone look tweaks left out)
