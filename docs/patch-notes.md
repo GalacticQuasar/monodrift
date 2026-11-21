@@ -5,6 +5,18 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-21 (8)
+
+- Covers: `1982425` to `e6048ac` (Uncapped speed; skid tweak and its revert left out)
+- Last commit: `e6048ac`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Uncapped speed**: a new Speed choice in Settings. The car never stops speeding up, and its steering keeps up, so how far you get comes down to your reactions. It isn't ranked, and it keeps its own best score
+- **Uncapped rooms**: rooms can pick Uncapped too, so everyone races with no speed limit
+
 ## 2026-11-21 (7)
 
 - Covers: `8bee899` to `37b0163` (switch who you watch)
