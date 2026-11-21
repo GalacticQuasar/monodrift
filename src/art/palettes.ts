@@ -38,6 +38,13 @@ export const PALETTES = {
     { char: 'm', name: 'mid', light: '#c8763c', dark: '#b5672f', css: '--copper-mid' },
     { char: 'd', name: 'lo', light: '#8f4e22', dark: '#7a411b', css: '--copper-lo' },
   ],
+  /** The win trophy (ui/win.ts), drawn in the DOM with the --trophy-* tokens. Grey, like the rest of the game. */
+  trophy: [
+    { char: 'o', name: 'outline', light: '#3a3a3a', dark: '#0f0f0f', css: '--trophy-outline' },
+    { char: 'h', name: 'hi', light: '#fafafa', dark: '#f0f0f0', css: '--trophy-hi' },
+    { char: 'm', name: 'mid', light: '#c6c6c6', dark: '#b4b4b4', css: '--trophy-mid' },
+    { char: 'd', name: 'lo', light: '#8a8a8a', dark: '#7a7a7a', css: '--trophy-lo' },
+  ],
 } satisfies Record<string, Tone[]>;
 
 export type PaletteName = keyof typeof PALETTES;

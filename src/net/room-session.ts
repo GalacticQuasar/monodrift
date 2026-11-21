@@ -3,7 +3,7 @@
 // player's own pose samples. main.ts drives runs; ui/room.ts shows the room.
 
 import { packPoses, type PoseLog } from '../lib/poses';
-import { PROTOCOL, type ClientMsg, type ErrorCode, type RoadKind, type RoomView, type ServerMsg } from '../lib/room-protocol';
+import { PING, PONG, PROTOCOL, ROOM, type ClientMsg, type ErrorCode, type RoadKind, type RoomView, type ServerMsg, type WinRule } from '../lib/room-protocol';
 import { createLiveRival, type LiveRival } from './rivals';
 
 /** connecting: first connection; open: in the room; reconnecting: lost it, trying again; failed: gave up (see `error`). */
@@ -21,6 +21,8 @@ export interface RoomSession {
   readonly rivals: LiveRival[];
   setReady(ready: boolean): void;
   setRoad(road: RoadKind): void;
+  /** How rounds are won (between rounds). */
+  setRules(win: WinRule, drivesOn: boolean): void;
   /** The player picked another car colour (null: default). */
   setColor(color: string | null): void;
   /** The player's run for round `round` started: poses from `log` go out from sample 0. */
@@ -53,6 +55,7 @@ export function createRoomSession(code: string, name: string, color: string | nu
   let attempt = 0;
   let retryTimer = 0;
   let closed = false;
+  let pingTimer = 0;
   /** Round the player is driving (0: none) and how many of its samples went out. */
   let runRound = 0;
   let sent = 0;
@@ -70,10 +73,13 @@ export function createRoomSession(code: string, name: string, color: string | nu
     let opened = false;
     sock.onopen = () => {
       opened = true;
+      clearInterval(pingTimer);
+      pingTimer = window.setInterval(() => sock.readyState === WebSocket.OPEN && sock.send(PING), ROOM.pingMs);
       sock.send(JSON.stringify({ t: 'hello', v: PROTOCOL, name, color } satisfies ClientMsg));
     };
     sock.onmessage = e => {
       if (sock !== ws) return;
+      if (e.data === PONG) return;
       let msg: ServerMsg;
       try {
         msg = JSON.parse(String(e.data)) as ServerMsg;
@@ -84,6 +90,7 @@ export function createRoomSession(code: string, name: string, color: string | nu
     };
     sock.onclose = e => {
       if (sock !== ws || closed) return;
+      clearInterval(pingTimer);
       ws = null;
       if (error && error !== 'offline') return fail(error); // turned away (full, closed, old game)
       if (e.code >= 4000 && e.code < 5000) return fail('bad-message');
@@ -124,7 +131,8 @@ export function createRoomSession(code: string, name: string, color: string | nu
         if (room && msg.r === room.round) rivals.find(r => r.id === msg.id)?.receive(msg.d, performance.now());
         break;
       case 'crashed':
-        if (room && msg.r === room.round) rivals.find(r => r.id === msg.id)?.crash(msg.s, msg.score);
+        // a last-standing winner who stopped didn't crash: their car stays as it is
+        if (room && msg.r === room.round && !(room.win === 'last' && !room.drivesOn && room.winner === msg.id)) rivals.find(r => r.id === msg.id)?.crash(msg.s, msg.score);
         break;
       case 'error':
         error = msg.code;
@@ -151,6 +159,12 @@ export function createRoomSession(code: string, name: string, color: string | nu
     events.onChange();
   }
 
+  // leaving or reloading the page: say goodbye, so the room doesn't keep a ghost
+  const onPageHide = (e: PageTransitionEvent) => {
+    if (!e.persisted) ws?.close(1000, 'left');
+  };
+  addEventListener('pagehide', onPageHide);
+
   connect();
 
   return {
@@ -173,6 +187,9 @@ export function createRoomSession(code: string, name: string, color: string | nu
     },
     setRoad(road) {
       send({ t: 'road', road });
+    },
+    setRules(win, drivesOn) {
+      send({ t: 'rules', win, drivesOn });
     },
     setColor(c) {
       color = c; // also for the hello after a reconnect
@@ -198,6 +215,8 @@ export function createRoomSession(code: string, name: string, color: string | nu
     close() {
       closed = true;
       clearTimeout(retryTimer);
+      clearInterval(pingTimer);
+      removeEventListener('pagehide', onPageHide);
       ws?.close(1000, 'left');
       ws = null;
       for (const r of rivals) r.state = 'gone';

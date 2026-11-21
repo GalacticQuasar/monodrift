@@ -36,11 +36,11 @@ describe('pixel art', () => {
     }
   });
 
-  it('copper tones match their CSS tokens in style.css (light and dark)', () => {
+  it('copper and trophy tones match their CSS tokens in style.css (light and dark)', () => {
     const block = (selector: string) => css.slice(css.indexOf(selector), css.indexOf('}', css.indexOf(selector)));
     const light = block(':root {'), dark = block(":root[data-theme='dark'] {");
     const value = (b: string, prop = '') => b.match(new RegExp(`${prop}:\\s*([^;]+);`))?.[1].trim();
-    for (const tone of PALETTES.copper) {
+    for (const tone of [...PALETTES.copper, ...PALETTES.trophy]) {
       expect(value(light, tone.css), tone.css).toBe(tone.light);
       expect(value(dark, tone.css), tone.css).toBe(tone.dark);
     }

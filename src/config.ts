@@ -91,6 +91,8 @@ export const UI = {
   eggRetryDelayMs: 1500,
   /** A still mouse cursor hides after this long (it also hides on key press or while steering). */
   cursorHideMs: 1500,
+  /** Rooms: the winner's trophy has the screen to itself this long before the results card comes up. */
+  winShowMs: 3000,
   /** Phones get the "add to home screen" card on a menu screen from this many runs on. */
   installPromptAfterRuns: 3,
 } as const;

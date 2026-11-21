@@ -63,6 +63,8 @@ export interface Hud {
   showSpectating(score: number, name: string | null): void;
   /** Room: joined mid-round, watching `name` until the next one. */
   showWatching(name: string | null): void;
+  /** A short announcement ("Ben wins!", "Last one standing!") with one line under it. */
+  showBanner(title: string, line: string): void;
   /**
    * The "Drive with a friend" link under start/game-over messages from now on
    * (null: none, e.g. while in a room). Doesn't redraw the current message.
@@ -146,6 +148,9 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
     },
     showSpectating(score, name) {
       message(String(score), [name ? `watching ${name}` : 'waiting for the results']);
+    },
+    showBanner(title, line) {
+      message(title, [line]);
     },
     showWatching(name) {
       message('Watching', [name ? `${name} is driving · you're in the next round` : "you're in the next round"]);

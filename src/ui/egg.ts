@@ -2,9 +2,9 @@
 // and a copper key bursts onto the game-over screen. The key is the one splash of
 // colour in the game; its tones are the --copper-* tokens in style.css.
 
-import { toneMap } from '../art/palettes';
 import keyArt from '../art/copper-key.json';
-import { artRuns, type PixelArt } from '../lib/pixel-art';
+import type { PixelArt } from '../lib/pixel-art';
+import { artSvg } from './art-svg';
 
 /** Pixel-art key, 3/4 view, light from the top-left. Edit it in the pixel editor (/tools/pixel-editor/). */
 const KEY = keyArt as PixelArt;
@@ -12,26 +12,6 @@ const KEY = keyArt as PixelArt;
 const TITLE = 'Copper Key';
 const SUBTITLE = 'the only way forward was backward';
 const SPARKS = 24;
-
-/** Inline SVG, one rect per run of same-tone pixels; colours come from CSS classes. */
-function keySvg(): SVGSVGElement {
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', `0 0 ${KEY.pixels[0].length} ${KEY.pixels.length}`);
-  svg.setAttribute('shape-rendering', 'crispEdges');
-  svg.setAttribute('aria-hidden', 'true');
-  const tones = toneMap(KEY.palette);
-  for (const { x, y, w, c } of artRuns(KEY)) {
-    const r = document.createElementNS(ns, 'rect');
-    r.setAttribute('x', String(x));
-    r.setAttribute('y', String(y));
-    r.setAttribute('width', String(w));
-    r.setAttribute('height', '1');
-    r.setAttribute('class', tones[c].name);
-    svg.append(r);
-  }
-  return svg;
-}
 
 export interface Egg {
   show(): void;
@@ -41,7 +21,7 @@ export interface Egg {
 export function createEgg(el: HTMLElement, canvas: HTMLCanvasElement): Egg {
   const key = document.createElement('div');
   key.className = 'egg-key';
-  key.append(keySvg());
+  key.append(artSvg(KEY));
 
   const title = document.createElement('b');
   title.setAttribute('aria-label', TITLE);

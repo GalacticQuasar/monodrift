@@ -6,9 +6,10 @@ import { KEYS, storage } from './lib/storage';
 import { startLoop } from './loop';
 import { ALL_LAYERS, createRenderer, type View } from './render/renderer';
 import { api, ApiError, player } from './lib/api';
-import { isRoomCode, normalizeCode } from './lib/room-protocol';
+import { isRoomCode, normalizeCode, type RoomView } from './lib/room-protocol';
 import { createRoomSession, type RoomSession } from './net/room-session';
 import { createRoomCard } from './ui/room';
+import { createWin } from './ui/win';
 import { createRunRecorder } from './lib/run-recorder';
 import { createBot } from './net/bot';
 import type { Rival } from './net/rivals';
@@ -36,6 +37,7 @@ const layers = fixedLayers ?? new Set(ALL_LAYERS);
 const renderer = createRenderer(canvas, COLORS.light, layers); // palette set by watchTheme below
 const hud = createHud($('#score'), $('#msg'));
 const egg = createEgg($('#egg'), canvas);
+const win = createWin($('#win'));
 const debug = createDebug();
 /** The player's run as pose samples (sent to a room; later, saved as a ghost). */
 const recorder = createRunRecorder();
@@ -81,6 +83,7 @@ function showReady() {
   paused = false;
   input.clear();
   egg.hide();
+  win.hide();
   bot?.stop();
   game = createGame(roadSeed());
   if (session) {
@@ -333,8 +336,47 @@ function roomChanged() {
     if (room.phase !== 'racing') watching = false;
     if (room.phase === 'results' && game.phase === 'over') hud.hideMessage(); // the card shows the scores
     if (room.phase === 'racing' && game.phase === 'over') showRoomSpectating();
+    showWinner(room);
   }
   roomCard.render(session);
+}
+
+/** What's been shown for the round's winner: the big trophy (winner), the banner (everyone). */
+let winShown = { round: 0, banner: false, big: false };
+
+/**
+ * The round has a winner: the winner gets the trophy once their run is over (in last
+ * standing with "Stops", it's over the moment they win); everyone else gets a banner
+ * while the round goes on, and the room card's title at the results.
+ */
+function showWinner(room: RoomView) {
+  if (!room.winner || !session) return;
+  if (winShown.round !== room.round) winShown = { round: room.round, banner: false, big: false };
+  const winner = room.players.find(p => p.id === room.winner);
+  if (!winner) return;
+  if (winner.id === session.you) {
+    if (game.phase === 'run') {
+      if (room.win === 'last' && !room.drivesOn) {
+        game.phase = 'over'; // won: this run is done
+        roomRunEnded();
+      } else if (!winShown.banner) {
+        winShown.banner = true;
+        hud.showBanner('Last one standing!', 'you win · keep going for score');
+        const r = room.round;
+        setTimeout(() => game.phase === 'run' && winShown.round === r && hud.hideMessage(), 2500);
+        return;
+      }
+    }
+    if (game.phase === 'over' && !winShown.big) {
+      winShown.big = true;
+      hud.hideMessage();
+      win.show('You win!', room.win === 'last' ? 'last one standing' : `furthest · ${game.score}`);
+      roomCard.holdFor(UI.winShowMs, session); // the results card would cover the trophy on a phone
+    }
+  } else if (room.phase === 'racing' && !winShown.banner && game.phase !== 'run') {
+    winShown.banner = true;
+    hud.showBanner(`${winner.name} wins!`, room.drivesOn ? 'last one standing · still driving' : 'last one standing');
+  }
 }
 
 function roundStarting(round: number, seed: number, daily: boolean, inMs: number) {
@@ -343,6 +385,7 @@ function roundStarting(round: number, seed: number, daily: boolean, inMs: number
   paused = false;
   input.clear();
   egg.hide();
+  win.hide();
   // each player in their own lane, by room order: centred on the road, NET.startSpread apart
   const players = session?.room?.players ?? [];
   const lane = Math.max(0, players.findIndex(p => p.id === session?.you));
@@ -384,7 +427,8 @@ function roomRunEnded() {
 
 /** The player's own round is over (or they're watching one): say who's still driving. */
 function showRoomSpectating() {
-  if (session?.room?.phase !== 'racing') return;
+  const room = session?.room;
+  if (room?.phase !== 'racing' || win.shown || (winShown.round === room.round && winShown.banner)) return; // the win says it all
   const name = view.follow?.name ?? null;
   if (watching) hud.showWatching(name);
   else hud.showSpectating(game.score, name);

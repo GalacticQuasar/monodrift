@@ -5,7 +5,7 @@
 // survives hibernation.
 
 import { DurableObject } from 'cloudflare:workers';
-import { parseClientMsg, ROOM, type ErrorCode, type ServerMsg } from '../src/lib/room-protocol';
+import { parseClientMsg, PING, PONG, ROOM, type ErrorCode, type ServerMsg } from '../src/lib/room-protocol';
 import type { Env } from './env';
 import { createRoomState, handle, join, leave, view, type Ctx, type Out, type RoomState } from './room-logic';
 import { randomId } from './tickets';
@@ -13,6 +13,8 @@ import { randomId } from './tickets';
 /** Kept on each socket (survives hibernation): the player it belongs to, once they've said hello. */
 interface Attachment {
   id: string | null;
+  /** When the socket connected (ms), for the staleness check before its first ping. */
+  at: number;
 }
 
 /** Close codes sent with an error (4000-4999 are for applications). */
@@ -24,11 +26,17 @@ export class Room extends DurableObject<Env> {
   private room: RoomState | null = null;
   /** Message counts per socket for rate limiting (in memory only; resets on wake, which is fine). */
   private rates = new Map<WebSocket, { second: number; count: number }>();
+  /** Last message time per socket (in memory; pings are tracked by the runtime). */
+  private lastMessage = new Map<WebSocket, number>();
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    // keep-alive pings are answered here without waking the object
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(PING, PONG));
     ctx.blockConcurrencyWhile(async () => {
-      this.room = (await ctx.storage.get<RoomState>('room')) ?? null;
+      const stored = await ctx.storage.get<RoomState>('room');
+      // rooms saved by an older version lack newer fields: fill in the defaults
+      this.room = stored ? { ...createRoomState(stored.code), ...stored } : null;
     });
   }
 
@@ -53,16 +61,20 @@ export class Room extends DurableObject<Env> {
     if (req.headers.get('upgrade') !== 'websocket') return new Response('expected a websocket', { status: 426 });
     const { 0: client, 1: server } = new WebSocketPair();
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ id: null } satisfies Attachment);
+    server.serializeAttachment({ id: null, at: Date.now() } satisfies Attachment);
     return new Response(null, { status: 101, webSocket: client });
   }
 
   async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer): Promise<void> {
+    this.lastMessage.set(ws, Date.now());
     if (this.overRate(ws)) return;
     const msg = parseClientMsg(data);
     const att = ws.deserializeAttachment() as Attachment;
     const room = this.room;
     if (!msg || !room) return this.reject(ws, room ? 'bad-message' : 'no-room');
+
+    // a ghost (gone without saying so) mustn't take a seat or hold up the start
+    if (att.id === null || msg.t === 'ready') await this.dropStale(ws);
 
     if (att.id === null) {
       // the first message must be hello
@@ -70,7 +82,7 @@ export class Room extends DurableObject<Env> {
       const id = randomId(8);
       const res = join(room, id, msg.name, msg.v, msg.color ?? null);
       if ('error' in res) return this.reject(ws, res.error);
-      ws.serializeAttachment({ id } satisfies Attachment);
+      ws.serializeAttachment({ id, at: att.at } satisfies Attachment);
       await this.save();
       return this.send(res.out);
     }
@@ -100,6 +112,7 @@ export class Room extends DurableObject<Env> {
 
   private async gone(ws: WebSocket) {
     this.rates.delete(ws);
+    this.lastMessage.delete(ws);
     const { id } = ws.deserializeAttachment() as Attachment;
     try {
       ws.close(1000, 'bye');
@@ -111,6 +124,17 @@ export class Room extends DurableObject<Env> {
     await this.save();
     this.send(out);
     if (!this.room.players.length) await this.ctx.storage.setAlarm(Date.now() + ROOM.idleMs);
+  }
+
+  /** Close sockets (other than `keep`) with no ping or message for ROOM.staleMs, and remove their players. */
+  private async dropStale(keep: WebSocket) {
+    const now = Date.now();
+    for (const ws of this.ctx.getWebSockets()) {
+      if (ws === keep) continue;
+      const att = ws.deserializeAttachment() as Attachment;
+      const last = Math.max(att.at, this.ctx.getWebSocketAutoResponseTimestamp(ws)?.getTime() ?? 0, this.lastMessage.get(ws) ?? 0);
+      if (now - last > ROOM.staleMs) await this.gone(ws);
+    }
   }
 
   private reject(ws: WebSocket, code: ErrorCode) {

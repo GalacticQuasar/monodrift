@@ -26,6 +26,11 @@
   --copper-lo: #8f4e22;
   --copper-text: #a85a26;
   --flash: #fff;
+  /* the win trophy (ui/win.ts, src/art/trophy.json) */
+  --trophy-outline: #3a3a3a;
+  --trophy-hi: #fafafa;
+  --trophy-mid: #c6c6c6;
+  --trophy-lo: #8a8a8a;
   --pixel: 'Silkscreen', ui-monospace, monospace;
   --sans: -apple-system, system-ui, Helvetica, Arial, sans-serif;
   /* 2px outline drawn with shadows on each side only, so the corners stay notched */
@@ -54,6 +59,10 @@
   --copper-lo: #7a411b;
   --copper-text: #e0a26a;
   --flash: #d8d8d8;
+  --trophy-outline: #0f0f0f;
+  --trophy-hi: #f0f0f0;
+  --trophy-mid: #b4b4b4;
+  --trophy-lo: #7a7a7a;
 }
 
 html,
@@ -780,20 +789,20 @@ button:disabled {
 #room .players .dot.on {
   background: var(--ink);
 }
-#room .road {
+#room .setting {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
-#room .road .label {
+#room .setting .label {
   font: 14px var(--pixel);
 }
-#room .road .seg {
+#room .setting .seg {
   display: flex;
   gap: 6px;
 }
-#room .road .seg button {
+#room .setting .seg button {
   padding: 5px 10px 4px;
   font-size: 14px;
 }
@@ -855,4 +864,109 @@ button:disabled {
     width: 22px;
     height: 22px;
   }
+}
+
+/* ---- round winner: trophy (ui/win.ts), same moves as the copper key ---- */
+
+#win {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: max(72px, calc(50% - 210px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+#win[hidden] {
+  display: none;
+}
+.win-trophy {
+  position: relative;
+  width: 110px;
+  animation:
+    egg-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both,
+    egg-spin 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) 0.45s both,
+    egg-bob 1.2s steps(2) 1.4s infinite;
+}
+.win-trophy svg,
+.trophy-icon {
+  display: block;
+  width: 100%;
+}
+.win-trophy svg {
+  filter: drop-shadow(3px 3px 0 var(--shadow));
+}
+.win-trophy .outline,
+.trophy-icon .outline {
+  fill: var(--trophy-outline);
+}
+.win-trophy .hi,
+.trophy-icon .hi {
+  fill: var(--trophy-hi);
+}
+.win-trophy .mid,
+.trophy-icon .mid {
+  fill: var(--trophy-mid);
+}
+.win-trophy .lo,
+.trophy-icon .lo {
+  fill: var(--trophy-lo);
+}
+.win-sparks {
+  position: absolute;
+  left: 50%;
+  top: 50px;
+}
+.win-sparks i {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  margin: -3px;
+  background: var(--trophy-mid);
+  box-shadow: 2px 2px 0 var(--trophy-outline);
+  animation: egg-spark 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+.win-sparks i.ink {
+  background: var(--ink);
+  box-shadow: none;
+}
+#win b {
+  margin-top: 12px;
+  font: 28px var(--pixel);
+  color: var(--ink);
+  text-shadow: 2px 2px 0 var(--shadow);
+  white-space: pre;
+}
+#win b span {
+  display: inline-block;
+  animation: egg-letter 0.35s cubic-bezier(0.3, 1.8, 0.5, 1) both;
+}
+.win-sub {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+  animation: msg-fade-in 0.4s ease-out 1.1s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .win-sparks {
+    display: none;
+  }
+  .win-trophy,
+  #win b span {
+    animation: msg-fade-in 0.4s ease-out both;
+  }
+}
+/* the winner on the room card */
+#room .trophy-icon {
+  width: 14px;
+  flex: none;
+}
+#room .setting {
+  flex-wrap: wrap;
+}
+#room .setting + .setting {
+  margin-top: 8px;
 }

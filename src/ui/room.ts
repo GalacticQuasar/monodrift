@@ -4,8 +4,9 @@
 
 import { DESKTOP } from '../lib/device';
 import { cleanName, nameProblem, NAME_MAX } from '../lib/names';
-import type { RoadKind } from '../lib/room-protocol';
+import type { RoadKind, RoomView } from '../lib/room-protocol';
 import type { RoomSession, SessionError } from '../net/room-session';
+import { trophyIcon } from './win';
 
 export interface RoomCard {
   /** Ask for a name before joining (players without a leaderboard name). */
@@ -16,6 +17,8 @@ export interface RoomCard {
   showCreateFailed(message: string): void;
   /** Show the session as it is now (call on every change). Hidden during a round. */
   render(s: RoomSession): void;
+  /** Keep the card out of the way for `ms` (the win trophy is playing), then show `s`. */
+  holdFor(ms: number, s: RoomSession): void;
   hide(): void;
   readonly shown: boolean;
 }
@@ -67,6 +70,9 @@ export const roomLink = (code: string) => `${location.origin}/?room=${code}`;
 export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCard {
   /** Remembered between renders so a re-render doesn't undo "Copied!". */
   let copiedUntil = 0;
+  /** Date.now() until which the card stays hidden (see holdFor). */
+  let heldUntil = 0;
+  let holdTimer = 0;
 
   function show(title: string, ...body: Node[]) {
     const leave = button('×', act.leave, { className: 'close', ariaLabel: 'Leave room' });
@@ -98,17 +104,25 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
     return b;
   }
 
-  function roadRow(s: RoomSession, road: RoadKind): HTMLElement {
-    const seg = el('div', { className: 'seg', role: 'group', ariaLabel: 'Road' });
-    for (const [value, text] of [
-      ['random', 'Random'],
-      ['daily', 'Daily'],
-    ] as const) {
-      const b = button(text, () => road !== value && s.setRoad(value));
-      b.setAttribute('aria-pressed', String(road === value));
+  /** A room setting: label and two choices, the current one pressed. */
+  function choiceRow<T>(label: string, options: readonly (readonly [T, string])[], value: T, pick: (v: T) => void): HTMLElement {
+    const seg = el('div', { className: 'seg', role: 'group', ariaLabel: label });
+    for (const [v, text] of options) {
+      const b = button(text, () => value !== v && pick(v));
+      b.setAttribute('aria-pressed', String(value === v));
       seg.append(b);
     }
-    return el('div', { className: 'road' }, el('span', { className: 'label', textContent: 'Road' }), seg);
+    return el('div', { className: 'setting' }, el('span', { className: 'label', textContent: label }), seg);
+  }
+
+  /** Road, win rule and (last standing) what the winner does: anyone can change them between rounds. */
+  function settingRows(s: RoomSession, room: RoomView): HTMLElement[] {
+    const rows = [
+      choiceRow<RoadKind>('Road', [['random', 'Random'], ['daily', 'Daily']], room.road, v => s.setRoad(v)),
+      choiceRow('Win', [['furthest', 'Furthest'], ['last', 'Last standing']] as const, room.win, v => s.setRules(v, room.drivesOn)),
+    ];
+    if (room.win === 'last') rows.push(choiceRow('Winner', [[false, 'Stops'], [true, 'Drives on']] as const, room.drivesOn, v => s.setRules('last', v)));
+    return rows;
   }
 
   function render(s: RoomSession) {
@@ -125,6 +139,7 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
       return show(title, el('p', { textContent: s.status === 'reconnecting' ? 'Connection lost, reconnecting…' : 'Joining…' }));
     }
     if (room.phase === 'racing') return hide();
+    if (Date.now() < heldUntil) return hide();
 
     const me = room.players.find(p => p.id === s.you);
     const alone = room.players.length < 2;
@@ -139,6 +154,7 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
         el(
           'li',
           { className: p.id === s.you ? 'me' : '' },
+          ...(results && p.id === room.winner ? [trophyIcon()] : []),
           el('span', { className: 'name', textContent: p.name + (p.id === s.you ? ' (you)' : '') }),
           el('span', { className: 'state', textContent: results && p.status === 'crashed' ? String(p.score) : '' }),
           el('span', { className: 'dot' + (p.ready ? ' on' : ''), title: p.ready ? 'ready' : 'not ready' }),
@@ -158,9 +174,9 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
     if (me?.ready) ready.textContent = 'Ready!';
 
     show(
-      results ? `Round ${room.round}` : title,
+      results ? resultsTitle(s, room) : title,
       list,
-      roadRow(s, room.road),
+      ...settingRows(s, room),
       el('p', { textContent: note }),
       ...(results ? leaderboardLine() : []),
       el('div', { className: 'buttons' }, inviteButton(room.code), ready),
@@ -188,6 +204,12 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
     }, { className: 'link' });
     const line = el('p', { className: 'offer' }, text, save, ' · ', no);
     return [line];
+  }
+
+  function resultsTitle(s: RoomSession, room: RoomView): string {
+    const w = room.players.find(p => p.id === room.winner);
+    if (!w) return `Round ${room.round}`;
+    return w.id === s.you ? 'You win!' : `${w.name} wins!`;
   }
 
   function hide() {
@@ -224,6 +246,12 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
       show('Drive with a friend', el('p', { textContent: `Couldn't make a room: ${message}.` }), el('div', { className: 'buttons' }, button('Try again', act.retryCreate, { className: 'primary' })));
     },
     render,
+    holdFor(ms, s) {
+      heldUntil = Date.now() + ms;
+      clearTimeout(holdTimer);
+      holdTimer = window.setTimeout(() => render(s), ms + 20);
+      hide();
+    },
     hide,
     get shown() {
       return !card.hidden;

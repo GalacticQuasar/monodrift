@@ -75,6 +75,13 @@ no framework, canvas 2D. See `README.md` for the file layout.
   and un-readies you between rounds. After crashing you watch the rival. Room runs are ranked like solo
   Normal runs; players without a leaderboard name are offered their room name on the
   results card. Max 4 players (`ROOM.maxPlayers`).
+- Room win rule (room card, between rounds): Furthest (top score wins at the results; a
+  tie crowns nobody) or Last standing (the last car left wins the moment the others are
+  out; the room picks whether it Stops or Drives on). Rounds driven alone crown nobody.
+  The winner gets the trophy (`ui/win.ts`, art in `src/art/trophy.json`, grey
+  `--trophy-*` tokens) and the results card waits `UI.winShowMs`; others get a banner and
+  the card title. Games send a keep-alive ping; the room drops connections silent for
+  `ROOM.staleMs` (when someone joins or readies), and games close theirs on pagehide.
 - Car colour (Settings > Car, `CAR_COLORS` in `config.ts`): default (black, white at
   night) or a muted colour, each with light/dark values; the only colour besides the
   copper key. In a room others see it (`hello`/`color` messages); rivals who keep the

@@ -173,6 +173,69 @@ describe('room: rounds', () => {
   });
 });
 
+describe('room: winning', () => {
+  /** Players `ids` in a room with these rules, round 1 started. */
+  function round(ids: string[], win: 'furthest' | 'last', drivesOn = false) {
+    const s = newRoom();
+    for (const id of ids) joined(s, id);
+    send(s, ids[0], { t: 'rules', win, drivesOn });
+    for (const id of ids) send(s, id, { t: 'ready', ready: true });
+    expect(s.phase).toBe('racing');
+    return s;
+  }
+  const crash = (s: RoomState, id: string, score: number) => send(s, id, { t: 'crash', r: s.round, s: score * 10, score });
+
+  it('furthest: the top score wins at the results; a tie crowns nobody', () => {
+    const s = round(['a', 'b', 'c'], 'furthest');
+    crash(s, 'a', 50);
+    crash(s, 'b', 20);
+    expect(s.winner).toBeNull(); // not until the round is over
+    const { out } = crash(s, 'c', 30);
+    expect(of(out, 'room')[0].msg.room).toMatchObject({ phase: 'results', winner: 'a' });
+
+    const t = round(['a', 'b'], 'furthest');
+    crash(t, 'a', 40);
+    crash(t, 'b', 40);
+    expect(t.winner).toBeNull();
+  });
+
+  it('last standing: the last car on the road wins the moment the others are out', () => {
+    const s = round(['a', 'b', 'c'], 'last');
+    crash(s, 'b', 90);
+    expect(s.winner).toBeNull();
+    const { out } = crash(s, 'a', 95);
+    // c wins, even with a lower score, while still driving
+    expect(of(out, 'room')[0].msg.room).toMatchObject({ phase: 'racing', winner: 'c', drivesOn: false });
+    crash(s, 'c', 10); // c's game stops and reports its score
+    expect(s).toMatchObject({ phase: 'results', winner: 'c' });
+  });
+
+  it('last standing: leaving counts as being out', () => {
+    const s = round(['a', 'b'], 'last', true);
+    leave(s, 'a', ctx);
+    expect(s).toMatchObject({ phase: 'racing', winner: 'b' });
+  });
+
+  it('nobody is crowned in a round driven alone', () => {
+    for (const win of ['furthest', 'last'] as const) {
+      const s = round(['a'], win);
+      crash(s, 'a', 30);
+      expect(s).toMatchObject({ phase: 'results', winner: null });
+    }
+  });
+
+  it('a new round clears the winner; rules only change between rounds', () => {
+    const s = round(['a', 'b'], 'last');
+    expect(send(s, 'a', { t: 'rules', win: 'furthest', drivesOn: false }).changed).toBe(false);
+    crash(s, 'a', 1);
+    crash(s, 'b', 2);
+    expect(s.winner).toBe('b');
+    send(s, 'a', { t: 'ready', ready: true });
+    send(s, 'b', { t: 'ready', ready: true });
+    expect(s).toMatchObject({ round: 2, winner: null });
+  });
+});
+
 describe('room protocol', () => {
   it('parses good messages and rejects bad ones', () => {
     expect(parseClientMsg(JSON.stringify({ t: 'hello', v: 1, name: 'Sam' }))).toEqual({ t: 'hello', v: 1, name: 'Sam', color: null });

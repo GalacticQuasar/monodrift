@@ -13,6 +13,7 @@ import {
   type RoomPhase,
   type RoomView,
   type ServerMsg,
+  type WinRule,
 } from '../src/lib/room-protocol';
 import { dailySeed, utcDay } from '../src/sim/daily';
 
@@ -25,6 +26,11 @@ export interface RoomState {
   road: RoadKind;
   seed: number;
   daily: boolean;
+  win: WinRule;
+  drivesOn: boolean;
+  winner: string | null;
+  /** Players who started the current/latest round (a crown needs at least 2). */
+  roundSize: number;
   players: PlayerView[];
 }
 
@@ -45,11 +51,22 @@ export interface Ctx {
 export const DEFAULT_NAME = 'Driver';
 
 export function createRoomState(code: string): RoomState {
-  return { code, created: false, phase: 'lobby', round: 0, road: 'random', seed: 0, daily: false, players: [] };
+  return { code, created: false, phase: 'lobby', round: 0, road: 'random', seed: 0, daily: false, win: 'furthest', drivesOn: false, winner: null, roundSize: 0, players: [] };
 }
 
 export function view(s: RoomState): RoomView {
-  return { code: s.code, phase: s.phase, round: s.round, road: s.road, seed: s.seed, daily: s.daily, players: s.players.map(p => ({ ...p })) };
+  return {
+    code: s.code,
+    phase: s.phase,
+    round: s.round,
+    road: s.road,
+    seed: s.seed,
+    daily: s.daily,
+    win: s.win,
+    drivesOn: s.drivesOn,
+    winner: s.winner,
+    players: s.players.map(p => ({ ...p })),
+  };
 }
 
 const snapshot = (s: RoomState): Out => ({ msg: { t: 'room', room: view(s) } });
@@ -109,6 +126,12 @@ export function handle(s: RoomState, id: string, msg: ClientMsg, ctx: Ctx): { ou
       p.ready = msg.ready;
       return { out: [...maybeStart(s, ctx), snapshot(s)], changed: true };
 
+    case 'rules':
+      if (s.phase === 'racing' || (s.win === msg.win && s.drivesOn === msg.drivesOn)) break;
+      s.win = msg.win;
+      s.drivesOn = msg.drivesOn;
+      return { out: [snapshot(s)], changed: true };
+
     case 'road':
       if (s.phase === 'racing' || s.road === msg.road) break;
       s.road = msg.road;
@@ -125,10 +148,22 @@ export function handle(s: RoomState, id: string, msg: ClientMsg, ctx: Ctx): { ou
   return { out: [], changed: false };
 }
 
-/** Everyone still driving has crashed (or left): show the results. */
+/**
+ * Last standing: once a single car is left of a round that started with two or more,
+ * it has won (set before the round ends, so its game can stop or drive on). Then,
+ * once everyone still driving has crashed (or left), show the results; furthest
+ * crowns the top score (a tie crowns nobody).
+ */
 function endRoundIfDone(s: RoomState): Out[] {
-  if (s.phase !== 'racing' || s.players.some(p => p.status === 'racing')) return [];
+  if (s.phase !== 'racing') return [];
+  const racing = s.players.filter(p => p.status === 'racing');
+  if (s.win === 'last' && !s.winner && s.roundSize >= 2 && racing.length === 1) s.winner = racing[0].id;
+  if (racing.length) return [];
   s.phase = 'results';
+  if (s.win === 'furthest' && s.roundSize >= 2) {
+    const ran = s.players.filter(p => p.status === 'crashed').sort((a, b) => b.score - a.score);
+    s.winner = ran.length && (ran.length === 1 || ran[0].score > ran[1].score) ? ran[0].id : null;
+  }
   return [];
 }
 
@@ -139,6 +174,8 @@ function maybeStart(s: RoomState, ctx: Ctx): Out[] {
   s.daily = s.road === 'daily';
   s.seed = s.daily ? dailySeed(utcDay(ctx.now)) : ctx.random() >>> 0;
   s.phase = 'racing';
+  s.winner = null;
+  s.roundSize = s.players.length;
   for (const p of s.players) {
     p.ready = false;
     p.status = 'racing';
