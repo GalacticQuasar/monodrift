@@ -5,6 +5,17 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-21 (6)
+
+- Covers: `f4f87cb` to `14f6d50` (join by code; Vik green colour left out on purpose)
+- Last commit: `14f6d50`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Join with a code**: tap "Drive with a friend" and type your friend's 4-letter room code to join them, or tap New room to start your own. Sending the link still works too
+
 ## 2026-11-21 (5)
 
 - Covers: `ae8f051` to `c740c26` (win rules, trophy, ghost player fix)
