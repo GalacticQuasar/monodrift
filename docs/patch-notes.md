@@ -5,6 +5,17 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-21 (3)
+
+- Covers: `6c5e6f3` to `4ec9c0b` (rooms of up to 4)
+- Last commit: `4ec9c0b`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Drive with friends**: rooms now fit up to 4 players. Everyone starts in their own lane, and the arrows at the screen edge show who is where and how far ahead or behind
+
 ## 2026-11-21 (2)
 
 - Covers: `9df0317` to `2e6cd38` (hidden tab fix in rooms)
