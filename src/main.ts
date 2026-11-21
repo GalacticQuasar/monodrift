@@ -338,6 +338,7 @@ function roundStarting(round: number, seed: number, daily: boolean, inMs: number
   game = createGame(seed, 'ready', startX); // the road, on screen during the countdown
   countdown = { goAt: performance.now() + inMs, round, seed, daily, startX, shown: 0 };
   hideMenuCards();
+  if (document.hidden) missStart(); // went away just as it started
 }
 
 /** Called every frame: count down, and start the round when it's time. */
@@ -382,13 +383,31 @@ function hideMenuCards() {
   news.hide();
 }
 
-// a room run can't pause: switching away from the game counts as a crash
+// A hidden tab doesn't run the game loop (no countdown, no driving), so in a room:
+// mid-run it counts as a crash, in the countdown you sit the round out, and between
+// rounds you're no longer ready (the round won't start without you).
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && session && game.phase === 'run') {
+  if (!document.hidden || !session) return;
+  if (game.phase === 'run') {
     game.phase = 'over';
     runEnded();
+  } else if (countdown.goAt) {
+    missStart();
+  } else if (session.room?.players.find(p => p.id === session!.you)?.ready) {
+    session.setReady(false);
   }
 });
+
+/** Away when the round started: out of it on 0, watching the others when back. */
+function missStart() {
+  if (!session || !countdown.goAt) return;
+  countdown.goAt = 0;
+  session.beginRun(countdown.round);
+  session.crashed(0, 0);
+  game.phase = 'over';
+  showRoomSpectating();
+  debug?.event('missed the start (tab hidden)');
+}
 
 // debug timing (only with ?debug); reused object so measuring makes no garbage
 const counters = { steps: 0, simMs: 0, drawMs: 0, trees: 0, cellsGenerated: 0, cellsEvicted: 0, skids: 0 };

@@ -70,8 +70,9 @@ no framework, canvas 2D. See `README.md` for the file layout.
   picker says so), and each speed keeps its own local best.
 - In a room (`?room=CODE`): rounds start from the room (countdown), not a tap; they're
   always Normal speed with crashes on (Road/Zen/Speed locked in Settings), each car in its
-  own lane (`NET.startSpread`). Settings doesn't pause a room run, and hiding the tab
-  counts as a crash. After crashing you watch the rival. Room runs are ranked like solo
+  own lane (`NET.startSpread`). Settings doesn't pause a room run. A hidden tab stops the
+  game loop, so hiding it counts as a crash mid-run, sits you out (0) in the countdown,
+  and un-readies you between rounds. After crashing you watch the rival. Room runs are ranked like solo
   Normal runs; players without a leaderboard name are offered their room name on the
   results card. Max 2 players (`ROOM.maxPlayers`).
 - Dark mode: the Dark setting (Off by default / On / Auto follows the device) sets
