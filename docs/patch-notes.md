@@ -5,6 +5,20 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-21 (9)
+
+- Covers: `1f5559f` to `7c4d211` (sonic boom, new Uncapped speed curve)
+- Last commit: `7c4d211`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Sonic boom**: in Uncapped, break the sound barrier. A vapor cone forms behind your car as you close in, then a boom ripples out and the screen shakes
+
+**Controls and feel**
+- **Uncapped speed**: the car now picks up speed quickly at first, holds back as it nears the sound barrier, and after the boom it gets faster and faster
+
 ## 2026-11-21 (8)
 
 - Covers: `1982425` to `e6048ac` (Uncapped speed; skid tweak and its revert left out)
