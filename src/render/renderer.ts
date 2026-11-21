@@ -227,7 +227,7 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
     const v = speedOf(g);
     if (v < UNCAPPED.coneSpeed || g.phase === 'over') return;
     const fade = Math.min(1, (v - UNCAPPED.coneSpeed) / (UNCAPPED.boomSpeed - UNCAPPED.coneSpeed));
-    const half = Math.max(0.3, 0.75 - ((v - UNCAPPED.coneSpeed) / UNCAPPED.boomSpeed) * 0.6); // half-angle (rad)
+    const half = Math.max(0.25, 0.6 - ((v - UNCAPPED.coneSpeed) / UNCAPPED.boomSpeed) * 0.5); // half-angle (rad)
     const len = 50 + 34 * fade;
     const tip = CAR.length / 2 + UNCAPPED.coneLead; // ahead of the car's centre
     const dx = -Math.cos(half) * len, dy = Math.sin(half) * len;

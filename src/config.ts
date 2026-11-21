@@ -132,7 +132,7 @@ export const UNCAPPED = {
   /** The vapor cone behind the car starts showing at this speed, full by boomSpeed. */
   coneSpeed: 650,
   /** The cone's tip sits this far (px) in front of the car's nose. */
-  coneLead: 6,
+  coneLead: 16,
   /** Boom shockwave: how long the ring grows, and how far (px). */
   shockMs: 700,
   shockRadius: 420,
