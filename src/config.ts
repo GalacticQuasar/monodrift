@@ -65,8 +65,13 @@ export const SKIDS = {
   levels: 7,
   /** Distance (px) between skid dots, so marks don't depend on frame rate. */
   spacing: 4,
+  /** Rear wheels: this far behind the car's centre... */
   wheelBack: 9,
-  wheelSide: 7,
+  /**
+   * ...and this far to each side. Inside the body (half width CAR.width / 2 = 7) so the
+   * 3 px marks stay under the car; at 7 they straddled its edge and looked too wide.
+   */
+  wheelSide: 5,
   max: 1600,
   trim: 200,
 } as const;
