@@ -55,13 +55,14 @@ export function view(s: RoomState): RoomView {
 const snapshot = (s: RoomState): Out => ({ msg: { t: 'room', room: view(s) } });
 
 /** A player joins (their `hello`). On failure, the error to send before closing. */
-export function join(s: RoomState, id: string, name: string, version: number): { out: Out[] } | { error: ErrorCode } {
+export function join(s: RoomState, id: string, name: string, version: number, color: string | null = null): { out: Out[] } | { error: ErrorCode } {
   if (!s.created) return { error: 'no-room' };
   if (version !== PROTOCOL) return { error: 'version' };
   if (s.players.length >= ROOM.maxPlayers) return { error: 'full' };
   s.players.push({
     id,
     name: uniqueName(s, cleanName(name)),
+    color,
     ready: false,
     // arriving mid-round: watch it, drive the next one
     status: s.phase === 'racing' ? 'watching' : 'idle',
@@ -111,6 +112,11 @@ export function handle(s: RoomState, id: string, msg: ClientMsg, ctx: Ctx): { ou
     case 'road':
       if (s.phase === 'racing' || s.road === msg.road) break;
       s.road = msg.road;
+      return { out: [snapshot(s)], changed: true };
+
+    case 'color':
+      if (p.color === msg.color) break;
+      p.color = msg.color;
       return { out: [snapshot(s)], changed: true };
 
     case 'hello': // already joined

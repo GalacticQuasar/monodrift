@@ -515,6 +515,11 @@ button:disabled {
   display: grid;
   gap: 12px;
   margin: 14px 0 6px;
+  /* short phones: the rows scroll, head and foot stay put */
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 8px 4px 4px; /* room for the frames and the picked swatch's ring */
+  margin-inline: -4px -8px;
 }
 #settings .row {
   display: flex;
@@ -809,4 +814,45 @@ button:disabled {
   text-decoration: underline;
   background: none;
   box-shadow: none;
+}
+
+/* ---- Settings: car colour swatches (colours from CAR_COLORS in config.ts) ---- */
+
+#settings .swatches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+}
+#settings button.swatch {
+  --swatch: var(--swatch-light);
+  width: 24px;
+  height: 24px;
+  min-width: 0;
+  margin: 2px;
+  padding: 0;
+  background: var(--swatch);
+  box-shadow: var(--frame), inset -2px -2px rgba(0, 0, 0, 0.18);
+}
+:root[data-theme='dark'] #settings button.swatch {
+  --swatch: var(--swatch-dark);
+}
+#settings button.swatch.default,
+:root[data-theme='dark'] #settings button.swatch.default {
+  --swatch: var(--ink);
+}
+/* picked: a second ring outside the frame */
+#settings button.swatch[aria-pressed='true'] {
+  background: var(--swatch);
+  box-shadow: var(--frame), inset -2px -2px rgba(0, 0, 0, 0.18), 0 0 0 4px var(--paper), 0 0 0 6px var(--ink);
+}
+@media (max-width: 380px) {
+  #settings .swatches {
+    gap: 4px;
+  }
+  #settings button.swatch {
+    width: 22px;
+    height: 22px;
+  }
 }

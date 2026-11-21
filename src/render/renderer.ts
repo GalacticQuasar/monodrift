@@ -1,6 +1,6 @@
 // Draws a GameState. Read-only: never modifies the state.
 
-import { CAMPFIRE, CAR, NET, ROAD_EDGE, SCENERY, SKIDS, TRACK, VIEW, type Palette } from '../config';
+import { CAMPFIRE, CAR, carColorValue, NET, ROAD_EDGE, SCENERY, SKIDS, TRACK, VIEW, type Palette } from '../config';
 import type { Rival } from '../net/rivals';
 import type { GameState } from '../sim/game';
 import { distanceScore } from '../sim/scoring';
@@ -17,9 +17,11 @@ export interface View {
   rivals: readonly Rival[];
   /** Camera follows this rival instead of the player's car (spectating after a crash). */
   follow: Rival | null;
+  /** The player's car colour id (config.ts CAR_COLORS), or null for the default. */
+  carColor: string | null;
 }
 
-const NO_VIEW: View = { rivals: [], follow: null };
+const NO_VIEW: View = { rivals: [], follow: null, carColor: null };
 
 export interface Renderer {
   /**
@@ -146,7 +148,7 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
       if (props && colors.glow) drawProps(props, cam, frame, true);
       if (layers.has('car')) {
         drawRivals(rivals); // under the player's own car
-        drawCar(cx, cy, ch, colors.car, colors.windshield);
+        drawCar(cx, cy, ch, carColorValue(view.carColor, colors.theme) ?? colors.car, colors.windshield);
       }
       // scenery last, so an off-road car (zen) drives under trees
       if (props) drawProps(props, cam, frame, false);
@@ -214,7 +216,7 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
       const r = rivals[i];
       if (r.state === 'waiting' || r.state === 'gone') continue;
       ctx.globalAlpha = r.state === 'crashed' ? 0.4 : 1;
-      drawCar(r.pose.x, r.pose.y, r.pose.h, colors.rivalCar, colors.rivalWindshield);
+      drawCar(r.pose.x, r.pose.y, r.pose.h, carColorValue(r.color, colors.theme) ?? colors.rivalCar, colors.rivalWindshield);
     }
     ctx.globalAlpha = 1;
   }

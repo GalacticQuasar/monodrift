@@ -12,6 +12,8 @@ export type RivalState = 'waiting' | 'racing' | 'crashed' | 'gone';
 export interface Rival {
   readonly id: string;
   name: string;
+  /** Car colour id (config.ts CAR_COLORS), or null: drawn in the palette's rivalCar grey. */
+  color: string | null;
   /** Current pose to draw. */
   readonly pose: Pose;
   state: RivalState;
@@ -47,6 +49,7 @@ export function createLiveRival(id: string, name: string): LiveRival {
   const rival: LiveRival = {
     id,
     name,
+    color: null,
     pose: { x: 0, y: 0, h: 0, i: 0 },
     state: 'waiting',
     score: 0,

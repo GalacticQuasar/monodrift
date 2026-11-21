@@ -68,7 +68,7 @@ export class Room extends DurableObject<Env> {
       // the first message must be hello
       if (msg.t !== 'hello') return this.reject(ws, 'bad-message');
       const id = randomId(8);
-      const res = join(room, id, msg.name, msg.v);
+      const res = join(room, id, msg.name, msg.v, msg.color ?? null);
       if ('error' in res) return this.reject(ws, res.error);
       ws.serializeAttachment({ id } satisfies Attachment);
       await this.save();

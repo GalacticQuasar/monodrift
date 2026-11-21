@@ -27,6 +27,8 @@ export const KEYS = {
   notesSeen: 'monodrift-notes-seen',
   /** Name in multiplayer rooms, for players without a leaderboard name. */
   roomName: 'monodrift-room-name',
+  /** Car colour: an id from CAR_COLORS in config.ts, or 'default' (also when unset). */
+  car: 'monodrift-car',
 } as const;
 
 export const storage = {

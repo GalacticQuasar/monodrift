@@ -200,6 +200,30 @@ export const CAMPFIRE = {
   glowBands: 3,
 } as const;
 
+/**
+ * Car colours (Settings > Car; in rooms, others see yours). The car is the one exception
+ * to the grayscale art, kept muted. Each has a light-mode value (on the white road:
+ * mid-dark) and a dark-mode value (on the night road: light, pastel). 'default' isn't
+ * listed: it's the palette's `car` (and rivals who keep it are drawn in `rivalCar`).
+ */
+export const CAR_COLORS = [
+  { id: 'red', name: 'Red', light: '#b0544c', dark: '#e2a39c' },
+  { id: 'mustard', name: 'Mustard', light: '#a3862c', dark: '#ddc98a' },
+  { id: 'green', name: 'Green', light: '#5c8752', dark: '#a7cd9a' },
+  { id: 'teal', name: 'Teal', light: '#3e827d', dark: '#95ccc7' },
+  { id: 'blue', name: 'Blue', light: '#4e6ea6', dark: '#a0b7e2' },
+  { id: 'purple', name: 'Purple', light: '#7a5a9c', dark: '#c4a9de' },
+  { id: 'pink', name: 'Pink', light: '#ad5a84', dark: '#e5a8c6' },
+] as const;
+
+export type CarColor = (typeof CAR_COLORS)[number]['id'] | 'default';
+
+/** The colour value for car colour `id` in `theme`, or null for the default / unknown. */
+export function carColorValue(id: string | null | undefined, theme: 'light' | 'dark'): string | null {
+  for (const c of CAR_COLORS) if (c.id === id) return c[theme];
+  return null;
+}
+
 export interface Palette {
   readonly theme: 'light' | 'dark';
   readonly ground: string;

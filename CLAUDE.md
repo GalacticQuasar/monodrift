@@ -75,6 +75,10 @@ no framework, canvas 2D. See `README.md` for the file layout.
   and un-readies you between rounds. After crashing you watch the rival. Room runs are ranked like solo
   Normal runs; players without a leaderboard name are offered their room name on the
   results card. Max 4 players (`ROOM.maxPlayers`).
+- Car colour (Settings > Car, `CAR_COLORS` in `config.ts`): default (black, white at
+  night) or a muted colour, each with light/dark values; the only colour besides the
+  copper key. In a room others see it (`hello`/`color` messages); rivals who keep the
+  default are drawn grey (`rivalCar`) so they don't look like your car.
 - Dark mode: the Dark setting (Off by default / On / Auto follows the device) sets
   `data-theme` on `<html>` (`ui/theme.ts`; an inline script in `index.html` does it
   before first paint). The canvas uses `COLORS.light`/`COLORS.dark`, the DOM uses the

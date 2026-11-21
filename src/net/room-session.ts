@@ -21,6 +21,8 @@ export interface RoomSession {
   readonly rivals: LiveRival[];
   setReady(ready: boolean): void;
   setRoad(road: RoadKind): void;
+  /** The player picked another car colour (null: default). */
+  setColor(color: string | null): void;
   /** The player's run for round `round` started: poses from `log` go out from sample 0. */
   beginRun(round: number): void;
   /** Send samples of `log` not sent yet (call after each recorded step). */
@@ -42,7 +44,7 @@ export interface SessionEvents {
 /** Waits between reconnect attempts (ms); after the last, give up. */
 const RETRY_MS = [500, 1000, 2000, 4000, 8000];
 
-export function createRoomSession(code: string, name: string, events: SessionEvents): RoomSession {
+export function createRoomSession(code: string, name: string, color: string | null, events: SessionEvents): RoomSession {
   let ws: WebSocket | null = null;
   let status: SessionStatus = 'connecting';
   let error: SessionError | null = null;
@@ -68,7 +70,7 @@ export function createRoomSession(code: string, name: string, events: SessionEve
     let opened = false;
     sock.onopen = () => {
       opened = true;
-      sock.send(JSON.stringify({ t: 'hello', v: PROTOCOL, name } satisfies ClientMsg));
+      sock.send(JSON.stringify({ t: 'hello', v: PROTOCOL, name, color } satisfies ClientMsg));
     };
     sock.onmessage = e => {
       if (sock !== ws) return;
@@ -141,9 +143,10 @@ export function createRoomSession(code: string, name: string, events: SessionEve
       }
     }
     for (const p of others) {
-      const r = rivals.find(r => r.id === p.id);
-      if (r) r.name = p.name;
-      else rivals.push(createLiveRival(p.id, p.name));
+      let r = rivals.find(r => r.id === p.id);
+      if (!r) rivals.push((r = createLiveRival(p.id, p.name)));
+      r.name = p.name;
+      r.color = p.color ?? null;
     }
     events.onChange();
   }
@@ -170,6 +173,10 @@ export function createRoomSession(code: string, name: string, events: SessionEve
     },
     setRoad(road) {
       send({ t: 'road', road });
+    },
+    setColor(c) {
+      color = c; // also for the hello after a reconnect
+      send({ t: 'color', color: c });
     },
     beginRun(round) {
       runRound = round;

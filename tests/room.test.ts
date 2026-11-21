@@ -60,6 +60,17 @@ describe('room: joining', () => {
     expect(t.players[0].name).toBe(DEFAULT_NAME);
   });
 
+  it('keeps each player\'s car colour, and passes on a change', () => {
+    const s = newRoom();
+    expect('error' in join(s, 'a', 'Ann', PROTOCOL, 'teal')).toBe(false);
+    joined(s, 'b', 'Ben'); // a game from before colours: no colour
+    expect(s.players.map(p => p.color)).toEqual(['teal', null]);
+    const { out, changed } = send(s, 'b', { t: 'color', color: 'pink' });
+    expect(changed).toBe(true);
+    expect(of(out, 'room')[0].msg.room.players[1].color).toBe('pink');
+    expect(send(s, 'b', { t: 'color', color: 'pink' }).changed).toBe(false);
+  });
+
   it('a player joining mid-round watches until the next', () => {
     const s = newRoom();
     joined(s, 'a');
@@ -164,7 +175,10 @@ describe('room: rounds', () => {
 
 describe('room protocol', () => {
   it('parses good messages and rejects bad ones', () => {
-    expect(parseClientMsg(JSON.stringify({ t: 'hello', v: 1, name: 'Sam' }))).toEqual({ t: 'hello', v: 1, name: 'Sam' });
+    expect(parseClientMsg(JSON.stringify({ t: 'hello', v: 1, name: 'Sam' }))).toEqual({ t: 'hello', v: 1, name: 'Sam', color: null });
+    expect(parseClientMsg(JSON.stringify({ t: 'hello', v: 1, name: 'Sam', color: 'teal' }))).toMatchObject({ color: 'teal' });
+    // a colour that isn't a short word is dropped (default), not an error
+    expect(parseClientMsg(JSON.stringify({ t: 'color', color: '#ff0000' }))).toEqual({ t: 'color', color: null });
     expect(parseClientMsg(JSON.stringify({ t: 'pose', r: 1, d: [1, -2] }))).toEqual({ t: 'pose', r: 1, d: [1, -2] });
     for (const bad of ['', 'nope', '[]', '{}', '{"t":"pose","r":1,"d":[0.5]}', '{"t":"crash","r":1,"s":-1,"score":3}', '{"t":"road","road":"moon"}', 'x'.repeat(5000)]) {
       expect(parseClientMsg(bad)).toBeNull();

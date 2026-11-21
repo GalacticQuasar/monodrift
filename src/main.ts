@@ -43,7 +43,7 @@ const recorder = createRunRecorder();
 const bot = debug && new URLSearchParams(location.search).has('bot') ? createBot() : null;
 const botRivals: Rival[] = bot ? [bot.rival] : [];
 /** Other cars for the renderer (reused every frame): the room's rivals while in one. */
-const view: View = { rivals: botRivals, follow: null };
+const view: View = { rivals: botRivals, follow: null, carColor: null }; // carColor: set from Settings below
 autoHideCursor();
 const install = createInstallPrompt($('#install'));
 const news = createNews($('#news'), __LATEST_NOTES__);
@@ -111,6 +111,9 @@ const settings = createSettings($('#settings-btn'), $('#settings'), changed => {
     applyTrees();
   } else if (changed === 'dark') {
     updateTheme();
+  } else if (changed === 'car') {
+    view.carColor = carColorId();
+    session?.setColor(view.carColor);
   }
 }, open => {
   // a room run isn't paused: everyone else keeps driving
@@ -122,6 +125,10 @@ const settings = createSettings($('#settings-btn'), $('#settings'), changed => {
     hud.showPaused(); // resuming the moment the panel closes would crash the car before you're ready
   }
 }, () => (session ? leaveRoom() : startRoom()));
+
+/** The car colour as sent to rooms and the renderer (null: default). */
+const carColorId = () => (settings.car === 'default' ? null : settings.car);
+view.carColor = carColorId();
 
 const updateTheme = watchTheme(
   () => settings.dark,
@@ -286,7 +293,7 @@ function joinRoom(code: string) {
     return;
   }
   session?.close();
-  session = createRoomSession(code, name, { onChange: roomChanged, onStart: roundStarting });
+  session = createRoomSession(code, name, carColorId(), { onChange: roomChanged, onStart: roundStarting });
   view.rivals = session.rivals;
   bot?.stop();
   settings.setInRoom(true);

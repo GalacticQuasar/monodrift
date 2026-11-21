@@ -41,6 +41,8 @@ export type PlayerStatus = 'idle' | 'racing' | 'crashed' | 'watching';
 export interface PlayerView {
   id: string;
   name: string;
+  /** Car colour id (config.ts CAR_COLORS), or null for the default. Unknown ids draw as the default. */
+  color: string | null;
   /** Wants the next round to start. */
   ready: boolean;
   status: PlayerStatus;
@@ -63,7 +65,9 @@ export interface RoomView {
 
 // game -> room
 export type ClientMsg =
-  | { t: 'hello'; v: number; name: string }
+  /** `color` is optional: games from before car colours don't send it. */
+  | { t: 'hello'; v: number; name: string; color?: string | null }
+  | { t: 'color'; color: string | null }
   | { t: 'ready'; ready: boolean }
   | { t: 'road'; road: RoadKind }
   /** Pose samples for round `r` (lib/poses.ts packPoses). */
@@ -86,6 +90,9 @@ export type ServerMsg =
 
 const isInt = (v: unknown, min: number, max: number): v is number => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
 
+/** A colour id as sent (short lowercase word), else null (default). The game ignores ids it doesn't know. */
+const colorOf = (v: unknown): string | null => (typeof v === 'string' && /^[a-z]{1,12}$/.test(v) ? v : null);
+
 /** The message, if `raw` is a well-formed game -> room message; null otherwise. */
 export function parseClientMsg(raw: unknown): ClientMsg | null {
   if (typeof raw !== 'string' || raw.length > ROOM.maxMessageBytes) return null;
@@ -99,7 +106,9 @@ export function parseClientMsg(raw: unknown): ClientMsg | null {
   }
   switch (m.t) {
     case 'hello':
-      return isInt(m.v, 0, 1e6) && typeof m.name === 'string' ? { t: 'hello', v: m.v, name: m.name } : null;
+      return isInt(m.v, 0, 1e6) && typeof m.name === 'string' ? { t: 'hello', v: m.v, name: m.name, color: colorOf(m.color) } : null;
+    case 'color':
+      return { t: 'color', color: colorOf(m.color) };
     case 'ready':
       return typeof m.ready === 'boolean' ? { t: 'ready', ready: m.ready } : null;
     case 'road':

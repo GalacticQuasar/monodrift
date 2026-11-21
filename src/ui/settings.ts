@@ -1,7 +1,7 @@
 // Settings: the Settings button and its panel (road, zen, speed, steering mode,
 // sensitivity, trees, dark). Choices are saved in localStorage and apply right away.
 
-import { INPUT, SPEED } from '../config';
+import { CAR_COLORS, INPUT, SPEED, type CarColor } from '../config';
 import type { SteerMode } from '../input/input';
 import { DESKTOP } from '../lib/device';
 import { KEYS, storage } from '../lib/storage';
@@ -21,11 +21,14 @@ export interface Settings {
   readonly trees: boolean;
   /** Dark mode: follow the device, or always on/off. */
   readonly dark: DarkSetting;
+  /** Car colour (others in a room see it too). */
+  readonly car: CarColor;
 }
 
 export type Speed = keyof typeof SPEED;
 
 const parseSpeed = (v: string | null): Speed => (v === 'slow' || v === 'fast' ? v : 'normal');
+const parseCar = (v: string | null): CarColor => CAR_COLORS.find(c => c.id === v)?.id ?? 'default';
 
 export interface SettingsPanel extends Settings {
   /** True while the panel is open (game input should be ignored). */
@@ -72,6 +75,7 @@ export function createSettings(
     sensitivity: loadLevel(),
     trees: storage.get(KEYS.trees) !== 'off',
     dark: parseDark(storage.get(KEYS.dark)),
+    car: parseCar(storage.get(KEYS.car)),
   };
   let isOpen = false;
   let inRoom = false;
@@ -139,6 +143,30 @@ export function createSettings(
     return el('div', { className: 'row' }, el('span', { className: 'label', textContent: 'Sensitivity' }), el('div', { className: 'seg' }, less, meter, more));
   }
 
+  /** Car colour swatches: the default (ink) and the muted colours, each with its light/dark value. */
+  function carRow(): HTMLElement {
+    const swatches = el('div', { className: 'swatches', role: 'group', ariaLabel: 'Car colour' });
+    const options: [CarColor, string, string, string][] = [['default', 'Default', '', ''], ...CAR_COLORS.map(c => [c.id, c.name, c.light, c.dark] as [CarColor, string, string, string])];
+    const buttons = options.map(([id, name, light, dark]) => {
+      const b = el('button', { type: 'button', className: id === 'default' ? 'swatch default' : 'swatch', ariaLabel: name, title: name });
+      if (light) {
+        b.style.setProperty('--swatch-light', light);
+        b.style.setProperty('--swatch-dark', dark);
+      }
+      b.addEventListener('click', () => {
+        if (state.car === id) return;
+        state.car = id;
+        storage.set(KEYS.car, id);
+        refresh();
+        onChange('car');
+      });
+      swatches.append(b);
+      return [id, b] as const;
+    });
+    refreshers.push(() => buttons.forEach(([id, b]) => b.setAttribute('aria-pressed', String(state.car === id))));
+    return el('div', { className: 'row' }, el('span', { className: 'label', textContent: 'Car' }), swatches);
+  }
+
   /** Under the Speed row while Slow/Fast is picked, so the switch away from Normal is noticed. */
   const speedNote = el('p', { className: 'note speed-note', textContent: 'Not ranked: only Normal speed is.' });
   refreshers.push(() => (speedNote.hidden = state.speed === 'normal' || inRoom));
@@ -195,6 +223,7 @@ export function createSettings(
       ),
     ),
     speedNote,
+    carRow(),
     // desktop steers with the keyboard only, so the touch steering mode doesn't apply
     ...(DESKTOP
       ? []
@@ -300,6 +329,9 @@ export function createSettings(
     },
     get dark() {
       return state.dark;
+    },
+    get car() {
+      return state.car;
     },
     get open() {
       return isOpen;
