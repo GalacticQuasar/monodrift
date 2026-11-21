@@ -5,6 +5,17 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-21 (4)
+
+- Covers: `7c311a3` to `75bf6ee` (car colours)
+- Last commit: `75bf6ee`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Car colour**: pick a colour for your car in Settings, from a few soft shades. Friends in your room see your car in that colour, so it's easy to tell who is who
+
 ## 2026-11-21 (3)
 
 - Covers: `6c5e6f3` to `4ec9c0b` (rooms of up to 4)
