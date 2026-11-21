@@ -215,8 +215,8 @@ export const CAR_COLORS = [
   { id: 'red', name: 'Red', light: '#b0544c', dark: '#e2a39c' },
   { id: 'mustard', name: 'Mustard', light: '#a3862c', dark: '#ddc98a' },
   { id: 'green', name: 'Green', light: '#5c8752', dark: '#a7cd9a' },
-  // a friend's pick: near-black green by day (barely apart from the default), mint at night
-  { id: 'vik', name: 'Vik green', light: '#09110D', dark: '#a2cdb8' },
+  // a friend's pick: deep green, the same by day and at night (on purpose, though it's dark on the night road)
+  { id: 'vik', name: 'Vik green', light: '#06402B', dark: '#06402B' },
   { id: 'teal', name: 'Teal', light: '#3e827d', dark: '#95ccc7' },
   { id: 'blue', name: 'Blue', light: '#4e6ea6', dark: '#a0b7e2' },
   { id: 'purple', name: 'Purple', light: '#7a5a9c', dark: '#c4a9de' },
