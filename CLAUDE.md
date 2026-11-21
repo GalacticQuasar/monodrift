@@ -110,6 +110,11 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - `todo.md` is the user's own list (in the repo): edit it only when asked, and let
   the user tick items off.
 
+## Next steps
+
+`docs/next-steps.md`: the ghost-race plan (not started), things not yet checked on the
+live site, and known small bugs. Update it when one of those is done.
+
 ## Patch notes
 
 For player-facing update notes ("what's new" to share with friends), use the

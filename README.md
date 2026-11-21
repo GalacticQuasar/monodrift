@@ -6,8 +6,11 @@ A minimal top-down drift game for desktop and mobile. Stay on the road; the
 car speeds up the longer you survive. Zen mode turns off crashes and scoring, and there's a dark mode in Settings.
 In **Settings**, switch **Road** to *Daily* to race everyone on the same road (new one at midnight
 UTC), and pick a name to get on the **leaderboard** (today and all-time).
-**Drive with a friend** (on the start screen, or Friends in Settings) makes a room: send the link,
-and you race on the same road with each other's cars on screen.
+**Drive with a friend** (on the start screen, or Friends in Settings) opens a room for up to 4:
+make a new one and send the link or its 4-letter code, or type a friend's code to join. You race
+on the same road with each other's cars on screen. A room picks the road, the speed, how rounds are
+won (*Furthest* or *Last standing*, with a trophy for the winner) and *Zen* (no crashes, just driving).
+Settings also has a **car colour**, and an *Uncapped* speed with no top speed (and a sonic boom).
 
 **Play it:** [monodrift.galacticquasar.dev](https://monodrift.galacticquasar.dev). After the first
 visit it also works offline, and it can be added to a phone's home screen.
@@ -55,6 +58,9 @@ the countdown and the results (rules in `worker/room-logic.ts`, protocol in
 To try it locally, run `npm run api` and `npm run dev`, and open the room link in two
 browser windows. `?debug&bot` adds an autopilot rival to solo runs (no server needed),
 for working on how rivals are drawn.
+
+Plans and loose ends for later (ghost races, things not yet checked live) are in
+[`docs/next-steps.md`](docs/next-steps.md).
 
 ### Leaderboard checks
 
