@@ -124,9 +124,10 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
   function settingRows(s: RoomSession, room: RoomView): HTMLElement[] {
     const rows = [
       choiceRow<RoadKind>('Road', [['random', 'Random'], ['daily', 'Daily']], room.road, v => s.setRoad(v)),
-      choiceRow('Win', [['furthest', 'Furthest'], ['last', 'Last standing']] as const, room.win, v => s.setRules(v, room.drivesOn)),
+      choiceRow('Speed', [[false, 'Normal'], [true, 'Uncapped']] as const, room.uncapped, v => s.setRules(room.win, room.drivesOn, v)),
+      choiceRow('Win', [['furthest', 'Furthest'], ['last', 'Last standing']] as const, room.win, v => s.setRules(v, room.drivesOn, room.uncapped)),
     ];
-    if (room.win === 'last') rows.push(choiceRow('Winner', [[false, 'Stops'], [true, 'Drives on']] as const, room.drivesOn, v => s.setRules('last', v)));
+    if (room.win === 'last') rows.push(choiceRow('Winner', [[false, 'Stops'], [true, 'Drives on']] as const, room.drivesOn, v => s.setRules('last', v, room.uncapped)));
     return rows;
   }
 

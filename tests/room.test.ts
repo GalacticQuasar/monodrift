@@ -178,7 +178,7 @@ describe('room: winning', () => {
   function round(ids: string[], win: 'furthest' | 'last', drivesOn = false) {
     const s = newRoom();
     for (const id of ids) joined(s, id);
-    send(s, ids[0], { t: 'rules', win, drivesOn });
+    send(s, ids[0], { t: 'rules', win, drivesOn, uncapped: false });
     for (const id of ids) send(s, id, { t: 'ready', ready: true });
     expect(s.phase).toBe('racing');
     return s;
@@ -216,6 +216,14 @@ describe('room: winning', () => {
     expect(s).toMatchObject({ phase: 'racing', winner: 'b' });
   });
 
+  it('rules carry the Uncapped choice to everyone', () => {
+    const s = newRoom();
+    joined(s, 'a');
+    joined(s, 'b');
+    const { out } = send(s, 'b', { t: 'rules', win: 'furthest', drivesOn: false, uncapped: true });
+    expect(of(out, 'room')[0].msg.room.uncapped).toBe(true);
+  });
+
   it('nobody is crowned in a round driven alone', () => {
     for (const win of ['furthest', 'last'] as const) {
       const s = round(['a'], win);
@@ -226,7 +234,7 @@ describe('room: winning', () => {
 
   it('a new round clears the winner; rules only change between rounds', () => {
     const s = round(['a', 'b'], 'last');
-    expect(send(s, 'a', { t: 'rules', win: 'furthest', drivesOn: false }).changed).toBe(false);
+    expect(send(s, 'a', { t: 'rules', win: 'furthest', drivesOn: false, uncapped: false }).changed).toBe(false);
     crash(s, 'a', 1);
     crash(s, 'b', 2);
     expect(s.winner).toBe('b');

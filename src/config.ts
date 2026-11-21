@@ -108,6 +108,8 @@ export const SPEED = {
   slow: 0.8,
   normal: 1,
   fast: 1.25,
+  /** Normal pace, but no top speed: past it the game keeps speeding up (sim Rules.uncapped). */
+  uncapped: 1,
 } as const;
 
 export const INPUT = {

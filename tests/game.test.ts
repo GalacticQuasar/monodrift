@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CAR } from '../src/config';
 import { crashedAtStart, createGame, step, type SteerIntent } from '../src/sim/game';
 
 const DT = 1 / 120;
@@ -23,6 +24,29 @@ describe('game', () => {
     expect(b.car.prevX).toBe(18);
     expect({ ...b.car, x: 0, prevX: 0 }).toEqual(a.car);
     expect(b.track.pts).toEqual(a.track.pts);
+  });
+
+  it('uncapped: past the top speed the game keeps speeding up, at the car\'s acceleration', () => {
+    const run = (uncapped: boolean) => {
+      const g = createGame(4, 'run');
+      for (let i = 0; i < 120 * 60; i++) step(g, { kind: 'rate', rate: 0 }, DT, { crash: false, uncapped });
+      return g;
+    };
+    expect(run(false).pace).toBe(1); // never moves outside Uncapped
+    const tTop = (CAR.maxSpeed - CAR.startSpeed) / CAR.accel; // ~27 s to top speed
+    expect(run(true).pace).toBeCloseTo(1 + (CAR.accel / CAR.maxSpeed) * (60 - tTop), 1);
+  });
+
+  it('uncapped: at double pace the car traces the same curve in half the time', () => {
+    const circle = (pace: number, seconds: number) => {
+      const g = createGame(4, 'run');
+      g.pace = pace;
+      for (let t = 0; t < seconds - 1e-9; t += DT) step(g, { kind: 'rate', rate: 1 }, DT, OFF);
+      return g.car;
+    };
+    const slow = circle(1, 2), fast = circle(2, 1);
+    expect(Math.hypot(slow.x - fast.x, slow.y - fast.y)).toBeLessThan(3);
+    expect(fast.h).toBeCloseTo(slow.h, 1);
   });
 
   it('is deterministic: same seed + same inputs = same run', () => {

@@ -27,7 +27,7 @@ export interface Settings {
 
 export type Speed = keyof typeof SPEED;
 
-const parseSpeed = (v: string | null): Speed => (v === 'slow' || v === 'fast' ? v : 'normal');
+const parseSpeed = (v: string | null): Speed => (v === 'slow' || v === 'fast' || v === 'uncapped' ? v : 'normal');
 const parseCar = (v: string | null): CarColor => CAR_COLORS.find(c => c.id === v)?.id ?? 'default';
 
 export interface SettingsPanel extends Settings {
@@ -230,6 +230,7 @@ export function createSettings(
           ['slow', 'Slow'],
           ['normal', 'Normal'],
           ['fast', 'Fast'],
+          ['uncapped', 'Uncapped'],
         ],
         () => state.speed,
         v => {
@@ -290,7 +291,7 @@ export function createSettings(
   ];
 
   const footNote = el('p', { className: 'note' });
-  refreshers.push(() => (footNote.textContent = inRoom ? 'In a room, it picks the road: Normal speed, no Zen.' : 'Changing Road, Zen or Speed starts over.'));
+  refreshers.push(() => (footNote.textContent = inRoom ? 'In a room, the room picks the road and speed. No Zen.' : 'Changing Road, Zen or Speed starts over.'));
 
   const box = el(
     'div',

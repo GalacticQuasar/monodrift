@@ -7,7 +7,7 @@
 // each round and the results.
 
 /** Bump when messages change incompatibly: an older cached game is told to reload. */
-export const PROTOCOL = 2;
+export const PROTOCOL = 3;
 
 export const ROOM = {
   maxPlayers: 4,
@@ -77,6 +77,8 @@ export interface RoomView {
   win: WinRule;
   /** Last standing: the winner keeps driving for score (true) or stops right away (false). */
   drivesOn: boolean;
+  /** Rounds without a top speed (sim Rules.uncapped); not ranked. */
+  uncapped: boolean;
   /**
    * Id of the current/latest round's winner, or null (none yet, a tie, or a round with
    * one player). Last standing: set the moment one car is left; furthest: at the results.
@@ -92,7 +94,7 @@ export type ClientMsg =
   | { t: 'color'; color: string | null }
   | { t: 'ready'; ready: boolean }
   | { t: 'road'; road: RoadKind }
-  | { t: 'rules'; win: WinRule; drivesOn: boolean }
+  | { t: 'rules'; win: WinRule; drivesOn: boolean; uncapped: boolean }
   /** Pose samples for round `r` (lib/poses.ts packPoses). */
   | { t: 'pose'; r: number; d: number[] }
   /** Crashed in round `r` at sim step `s` with `score`. */
@@ -135,7 +137,9 @@ export function parseClientMsg(raw: unknown): ClientMsg | null {
     case 'ready':
       return typeof m.ready === 'boolean' ? { t: 'ready', ready: m.ready } : null;
     case 'rules':
-      return (m.win === 'furthest' || m.win === 'last') && typeof m.drivesOn === 'boolean' ? { t: 'rules', win: m.win, drivesOn: m.drivesOn } : null;
+      return (m.win === 'furthest' || m.win === 'last') && typeof m.drivesOn === 'boolean' && typeof m.uncapped === 'boolean'
+        ? { t: 'rules', win: m.win, drivesOn: m.drivesOn, uncapped: m.uncapped }
+        : null;
     case 'road':
       return m.road === 'random' || m.road === 'daily' ? { t: 'road', road: m.road } : null;
     case 'pose':

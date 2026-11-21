@@ -116,7 +116,7 @@ export function createHud(scoreEl: HTMLElement, msgEl: HTMLElement): Hud {
       shownScore = text;
     },
     showStart(mode, zen, daily, speed) {
-      const pace = speed === 'slow' ? 'Slow' : speed === 'fast' ? 'Fast' : '';
+      const pace = speed === 'slow' ? 'Slow' : speed === 'fast' ? 'Fast' : speed === 'uncapped' ? 'Uncapped' : '';
       const help = DESKTOP ? [] : [HELP[mode]];
       const edges = !DESKTOP && mode === 'sides'; // chevrons at the screen edges leave a narrower column
       const zenLines = edges ? ['no crashes, no score', 'just drive'] : ['no crashes, no score · just drive'];

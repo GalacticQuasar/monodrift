@@ -28,6 +28,7 @@ export interface RoomState {
   daily: boolean;
   win: WinRule;
   drivesOn: boolean;
+  uncapped: boolean;
   winner: string | null;
   /** Players who started the current/latest round (a crown needs at least 2). */
   roundSize: number;
@@ -51,7 +52,7 @@ export interface Ctx {
 export const DEFAULT_NAME = 'Driver';
 
 export function createRoomState(code: string): RoomState {
-  return { code, created: false, phase: 'lobby', round: 0, road: 'random', seed: 0, daily: false, win: 'furthest', drivesOn: false, winner: null, roundSize: 0, players: [] };
+  return { code, created: false, phase: 'lobby', round: 0, road: 'random', seed: 0, daily: false, win: 'furthest', drivesOn: false, uncapped: false, winner: null, roundSize: 0, players: [] };
 }
 
 export function view(s: RoomState): RoomView {
@@ -64,6 +65,7 @@ export function view(s: RoomState): RoomView {
     daily: s.daily,
     win: s.win,
     drivesOn: s.drivesOn,
+    uncapped: s.uncapped,
     winner: s.winner,
     players: s.players.map(p => ({ ...p })),
   };
@@ -127,9 +129,10 @@ export function handle(s: RoomState, id: string, msg: ClientMsg, ctx: Ctx): { ou
       return { out: [...maybeStart(s, ctx), snapshot(s)], changed: true };
 
     case 'rules':
-      if (s.phase === 'racing' || (s.win === msg.win && s.drivesOn === msg.drivesOn)) break;
+      if (s.phase === 'racing' || (s.win === msg.win && s.drivesOn === msg.drivesOn && s.uncapped === msg.uncapped)) break;
       s.win = msg.win;
       s.drivesOn = msg.drivesOn;
+      s.uncapped = msg.uncapped;
       return { out: [snapshot(s)], changed: true };
 
     case 'road':

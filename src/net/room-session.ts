@@ -21,8 +21,8 @@ export interface RoomSession {
   readonly rivals: LiveRival[];
   setReady(ready: boolean): void;
   setRoad(road: RoadKind): void;
-  /** How rounds are won (between rounds). */
-  setRules(win: WinRule, drivesOn: boolean): void;
+  /** How rounds are won, and whether they're Uncapped (between rounds). */
+  setRules(win: WinRule, drivesOn: boolean, uncapped: boolean): void;
   /** The player picked another car colour (null: default). */
   setColor(color: string | null): void;
   /** The player's run for round `round` started: poses from `log` go out from sample 0. */
@@ -188,8 +188,8 @@ export function createRoomSession(code: string, name: string, color: string | nu
     setRoad(road) {
       send({ t: 'road', road });
     },
-    setRules(win, drivesOn) {
-      send({ t: 'rules', win, drivesOn });
+    setRules(win, drivesOn, uncapped) {
+      send({ t: 'rules', win, drivesOn, uncapped });
     },
     setColor(c) {
       color = c; // also for the hello after a reconnect

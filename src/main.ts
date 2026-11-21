@@ -60,7 +60,10 @@ const leaderboard = createLeaderboard({
 });
 
 /** Local best is kept per speed, so Slow runs don't set the Normal best (room runs are Normal). */
-const bestKey = () => (session || settings.speed === 'normal' ? KEYS.best : `${KEYS.best}-${settings.speed}`);
+const bestKey = () => {
+  const speed = session ? (ROOM_RULES.uncapped ? 'uncapped' : 'normal') : settings.speed;
+  return speed === 'normal' ? KEYS.best : `${KEYS.best}-${speed}`;
+};
 const loadBest = () => Number(storage.get(bestKey())) || 0;
 /** performance.now() before which a tap won't start a new run. */
 let retryAllowedAt = 0;
@@ -192,12 +195,12 @@ function startRun(seed: number, ranked: boolean, daily: boolean, startX = 0) {
   debug?.event('start');
 }
 
-/** Room rounds: Normal speed, crashes on, whatever the player's settings say. */
-const ROOM_RULES = { crash: true, speed: 1 };
+/** Room rounds: Normal pace, crashes on, whatever the player's settings say; Uncapped if the room says so (set per round). */
+const ROOM_RULES = { crash: true, speed: 1, uncapped: false };
 
 function tick(dt: number) {
   if (paused) return;
-  const rules = session ? ROOM_RULES : { crash: !settings.zen, speed: SPEED[settings.speed] };
+  const rules = session ? ROOM_RULES : { crash: !settings.zen, speed: SPEED[settings.speed], uncapped: settings.speed === 'uncapped' };
   bot?.tick(dt, rules);
   if (game.phase !== 'run') return;
   const crashed = step(game, input.intent(), dt, rules) === 'crash';
@@ -443,7 +446,9 @@ function updateCountdown(now: number) {
     return;
   }
   countdown.goAt = 0;
-  startRun(countdown.seed, true, countdown.daily, countdown.startX);
+  ROOM_RULES.uncapped = !!session.room?.uncapped;
+  // an Uncapped round can't be checked against the top speed, so it isn't ranked
+  startRun(countdown.seed, !ROOM_RULES.uncapped, countdown.daily, countdown.startX);
   session.beginRun(countdown.round);
   session.sendPoses(recorder.log); // the starting pose, so the others see the car right away
 }

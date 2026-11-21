@@ -66,11 +66,14 @@ no framework, canvas 2D. See `README.md` for the file layout.
   Steering, Sensitivity, Trees and Dark live in the Settings panel (`ui/settings.ts`); changing Road, Zen
   or Speed starts over. Opening Settings mid-run pauses the run; after closing it, the next
   tap/key resumes (not in a room, see below). Sensitivity scales steering in `input/`, never in the sim.
-- Speed (Slow/Normal/Fast, `SPEED` in `config.ts`) scales game time via the sim's
-  `speed` rule. Only Normal runs are ranked (no ticket otherwise; a note under the
+- Speed (Slow/Normal/Fast/Uncapped, `SPEED` in `config.ts`) scales game time via the sim's
+  `speed` rule. Uncapped (sim `uncapped` rule) is Normal until top speed, then
+  `GameState.pace` keeps growing (by `CAR.accel / CAR.maxSpeed` per second) and scales
+  the whole car sim, so it gets faster forever while steering keeps up (same curves,
+  quicker). Rooms can pick Uncapped too (room Speed setting); those rounds aren't ranked. Only Normal runs are ranked (no ticket otherwise; a note under the
   picker says so), and each speed keeps its own local best.
 - In a room (`?room=CODE`): rounds start from the room (countdown), not a tap; they're
-  always Normal speed with crashes on (Road/Zen/Speed locked in Settings), each car in its
+  Normal pace (or Uncapped if the room says so) with crashes on (Road/Zen/Speed locked in Settings), each car in its
   own lane (`NET.startSpread`). Settings doesn't pause a room run. A hidden tab stops the
   game loop, so hiding it counts as a crash mid-run, sits you out (0) in the countdown,
   and un-readies you between rounds. After crashing you watch a rival (the leader; a tap/key switches to

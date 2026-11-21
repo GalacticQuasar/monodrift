@@ -1,7 +1,7 @@
 // The whole simulation. No DOM, no clock, no Math.random: the same seed and the
 // same sequence of intents always produce the same run.
 
-import { ROAD_EDGE, TRACK } from '../config';
+import { CAR, ROAD_EDGE, TRACK } from '../config';
 import { createCar, slipOf, updateCar, type Car, type Steer } from './car';
 import { createRng } from './rng';
 import { distanceScore } from './scoring';
@@ -23,6 +23,12 @@ export interface Rules {
   crash: boolean;
   /** Game-speed multiplier (Speed setting); 1 when left out. */
   speed?: number;
+  /**
+   * Uncapped: once the car reaches its top speed, the game keeps speeding up (see
+   * GameState.pace) instead of holding it, so the car gets faster forever while still
+   * turning through the same lines.
+   */
+  uncapped?: boolean;
 }
 
 export interface GameState {
@@ -34,6 +40,12 @@ export interface GameState {
   skids: Skids;
   score: number;
   aim: { gesture: number; anchor: number } | null;
+  /**
+   * Uncapped's extra speed-up (1 = none): everything the car does runs this much faster.
+   * Grows by CAR.accel / CAR.maxSpeed per second at top speed, as if the car kept
+   * accelerating, with steering and grip keeping up (same curves, just quicker).
+   */
+  pace: number;
 }
 
 export type StepEvent = 'crash';
@@ -49,6 +61,7 @@ export function createGame(seed: number, phase: Phase = 'ready', startX = 0): Ga
     skids: createSkids(),
     score: 0,
     aim: null,
+    pace: 1,
   };
 }
 
@@ -56,6 +69,8 @@ export function createGame(seed: number, phase: Phase = 'ready', startX = 0): Ga
 export function step(g: GameState, intent: SteerIntent, dt: number, rules: Rules): StepEvent | null {
   if (g.phase !== 'run') return null;
   dt *= rules.speed ?? 1;
+  if (rules.uncapped && g.car.speed >= CAR.maxSpeed) g.pace += (CAR.accel / CAR.maxSpeed) * dt;
+  dt *= g.pace;
 
   updateCar(g.car, resolveSteer(g, intent), dt);
 
