@@ -25,7 +25,7 @@ export function autopilot(g: GameState, steps: number, out: { kind: 'rate'; rate
 export interface Bot {
   readonly rival: LiveRival;
   /** New run on road `seed` (the player's). */
-  start(seed: number): void;
+  start(seed: number, uncapped?: boolean): void;
   /** Off the road for good (back to the start screen). */
   stop(): void;
   /** One sim step, alongside the player's. */
@@ -55,10 +55,10 @@ export function createBot(): Bot {
 
   return {
     rival,
-    start(seed) {
+    start(seed, uncapped = false) {
       run++;
       rival.reset();
-      game = createGame(seed, 'run');
+      game = createGame(seed, 'run', 0, uncapped);
       rec.start(game);
       sent = 0;
       send();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { CAR, UNCAPPED } from '../src/config';
-import { crashedAtStart, createGame, speedOf, step, uncappedSpeed, type SteerIntent } from '../src/sim/game';
+import { CAR, TRACK, UNCAPPED } from '../src/config';
+import { crashedAtStart, createGame, speedOf, step, type GameState, type SteerIntent } from '../src/sim/game';
+import { bendScale, extendTrack } from '../src/sim/track';
 
 const DT = 1 / 120;
 const ON = { crash: true };
@@ -26,51 +27,58 @@ describe('game', () => {
     expect(b.track.pts).toEqual(a.track.pts);
   });
 
-  it('uncapped: speed is a cubic of distance, level at the sound barrier', () => {
-    expect(uncappedSpeed(0)).toBeCloseTo(CAR.startSpeed);
-    expect(uncappedSpeed(UNCAPPED.boomScore)).toBe(UNCAPPED.boomSpeed);
-    // flat around the barrier, steep away from it
-    const slope = (s: number) => uncappedSpeed(s + 1) - uncappedSpeed(s);
-    expect(slope(UNCAPPED.boomScore)).toBeLessThan(0.01);
-    expect(slope(0)).toBeGreaterThan(3);
-    expect(slope(2 * UNCAPPED.boomScore)).toBeGreaterThan(3);
+  /** A good autopilot: aims ahead by time (further at speed) and allows for the slide. */
+  const pilot = (g: GameState): SteerIntent => {
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    const v = Math.hypot(g.car.vx, g.car.vy) || 1;
+    const tgt = g.track.pts[g.trackIndex + Math.max(2, Math.round((v * 0.35) / 20))];
+    const want = Math.atan2(tgt.y - g.car.y, tgt.x - g.car.x);
+    const travel = Math.atan2(g.car.vy, g.car.vx);
+    return { kind: 'rate', rate: Math.max(-1, Math.min(1, wrap(want + wrap(want - travel) * 0.8 - g.car.h) * 5)) };
+  };
+
+  it('uncapped: the car keeps accelerating at the same rate, and booms once at the boom speed', () => {
+    const drive = (uncapped: boolean, seconds: number) => {
+      const g = createGame(4, 'run', 0, uncapped);
+      const booms: number[] = [];
+      for (let i = 0; i < 120 * seconds; i++) if (step(g, pilot(g), DT, { crash: false, uncapped }) === 'boom') booms.push(speedOf(g));
+      return { g, booms };
+    };
+    const capped = drive(false, 70);
+    expect(capped.g.car.speed).toBe(CAR.maxSpeed);
+    expect(capped.booms).toEqual([]);
+    const { g, booms } = drive(true, 70);
+    expect(g.car.speed).toBeCloseTo(CAR.startSpeed + CAR.accel * 70, 0); // linear, no cap
+    expect(booms).toHaveLength(1);
+    expect(booms[0]).toBeGreaterThanOrEqual(UNCAPPED.boomSpeed);
+    expect(booms[0]).toBeLessThan(UNCAPPED.boomSpeed + 1);
   });
 
-  it('uncapped: the car follows the curve and booms once, near the boom score', () => {
-    const run = (uncapped: boolean) => {
-      const g = createGame(4, 'run');
-      const events: { t: number; score: number; speed: number }[] = [];
-      for (let i = 0; i < 120 * 70; i++) {
-        // autopilot (zen, so a slip doesn't end it): keeps the car on the road, so distance grows
-        const tgt = g.track.pts[g.trackIndex + 4];
-        let d = Math.atan2(tgt.y - g.car.y, tgt.x - g.car.x) - g.car.h;
-        d = Math.atan2(Math.sin(d), Math.cos(d));
-        if (step(g, { kind: 'rate', rate: Math.max(-1, Math.min(1, d * 6)) }, DT, { crash: false, uncapped }) === 'boom')
-          events.push({ t: i * DT, score: g.score, speed: speedOf(g) });
-      }
-      return { g, events };
+  it('uncapped road: the normal road until top speed, then bends ease off with distance', () => {
+    const normal = createGame(9).track, unc = createGame(9, 'ready', 0, true).track;
+    extendTrack(normal, 3000);
+    extendTrack(unc, 3000);
+    const sharp = TRACK.maxCurvature + 1e-9;
+    const turn = (pts: { x: number; y: number }[], i: number) => {
+      const a = Math.atan2(pts[i].y - pts[i - 1].y, pts[i].x - pts[i - 1].x);
+      const b = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
+      return Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a)));
     };
-    const capped = run(false);
-    expect(capped.g.pace).toBe(1); // never moves outside Uncapped
-    expect(capped.events).toEqual([]);
-    const { g, events } = run(true);
-    expect(events).toHaveLength(1);
-    expect(events[0].speed).toBeGreaterThanOrEqual(UNCAPPED.boomSpeed);
-    expect(Math.abs(events[0].score - UNCAPPED.boomScore)).toBeLessThan(20);
-    expect(g.boomed).toBe(true);
-    expect(speedOf(g)).toBeGreaterThan(UNCAPPED.boomSpeed); // and faster since
+    let firstScaled = 0;
+    while (bendScale(firstScaled) === 1) firstScaled++;
+    expect(firstScaled).toBeGreaterThan(400); // about score 180
+    expect(unc.pts.slice(0, firstScaled)).toEqual(normal.pts.slice(0, firstScaled));
+    for (let i = firstScaled + 1; i < 2999; i++) expect(turn(unc.pts, i)).toBeLessThanOrEqual(sharp * bendScale(i - 1) + 1e-6);
   });
 
-  it('uncapped: at double pace the car traces the same curve in half the time', () => {
-    const circle = (pace: number, seconds: number) => {
-      const g = createGame(4, 'run');
-      g.pace = pace;
-      for (let t = 0; t < seconds - 1e-9; t += DT) step(g, { kind: 'rate', rate: 1 }, DT, OFF);
-      return g.car;
+  it('uncapped road: a good driver gets past the sonic boom (on the normal road, mostly not)', () => {
+    const run = (seed: number, gentle: boolean) => {
+      const g = createGame(seed, 'run', 0, gentle);
+      for (let t = 0; t < 150 && g.phase === 'run'; t += DT) step(g, pilot(g), DT, { crash: true, uncapped: true });
+      return g.boomed;
     };
-    const slow = circle(1, 2), fast = circle(2, 1);
-    expect(Math.hypot(slow.x - fast.x, slow.y - fast.y)).toBeLessThan(3);
-    expect(fast.h).toBeCloseTo(slow.h, 1);
+    for (const seed of [1, 2, 3, 4, 5]) expect(run(seed, true)).toBe(true);
+    expect([1, 2, 3, 4, 5].filter(seed => run(seed, false)).length).toBeLessThan(3);
   });
 
   it('is deterministic: same seed + same inputs = same run', () => {

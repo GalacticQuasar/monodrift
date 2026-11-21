@@ -123,15 +123,12 @@ export const INPUT = {
 } as const;
 
 /**
- * Uncapped speed: the car's speed (px/s) follows a cubic of the distance driven, in
- * points: it climbs fast at first, levels off near the "sound barrier" (boomSpeed, at
- * boomScore points), breaks it with a sonic boom, then climbs faster and faster.
- *   speed(s) = boomSpeed + (boomSpeed - CAR.startSpeed) * ((s - boomScore) / boomScore)^3
- * With these numbers (a real drive): the vapor cone at ~21 s, the boom at ~42 s, 900 px/s at ~62 s.
+ * Uncapped speed: no top speed, the car just keeps accelerating at CAR.accel. Steering
+ * stays as it is; instead the road's bends ease off with distance (track.ts), so they
+ * stay turnable at the speed you'd have by then. The sonic boom is at boomSpeed (~59 s in).
  */
 export const UNCAPPED = {
   boomSpeed: 750,
-  boomScore: 400,
   /** The vapor cone behind the car starts showing at this speed, full by boomSpeed. */
   coneSpeed: 650,
   /** The cone's tip sits this far (px) in front of the car's nose. */

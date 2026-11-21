@@ -33,12 +33,13 @@ export function createCar(x = 0): Car {
   };
 }
 
-export function updateCar(car: Car, steer: Steer, dt: number): void {
+/** `maxSpeed`: the top speed (Infinity in Uncapped). */
+export function updateCar(car: Car, steer: Steer, dt: number, maxSpeed: number = CAR.maxSpeed): void {
   car.prevX = car.x;
   car.prevY = car.y;
   car.prevH = car.h;
 
-  car.speed = Math.min(CAR.maxSpeed, car.speed + CAR.accel * dt);
+  car.speed = Math.min(maxSpeed, car.speed + CAR.accel * dt);
 
   if ('target' in steer) {
     // swing toward the aimed heading quickly, but capped so it still feels like a car

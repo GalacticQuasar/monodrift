@@ -181,9 +181,11 @@ const input = createInput(canvas, {
 
 /** Start driving road `seed`. `ranked`: get a leaderboard ticket (Normal speed, no zen). */
 function startRun(seed: number, ranked: boolean, daily: boolean, startX = 0) {
-  game = createGame(seed, 'run', startX);
+  // Uncapped runs need the Uncapped road (bends ease off with distance)
+  const uncapped = session ? ROOM_RULES.uncapped : settings.speed === 'uncapped';
+  game = createGame(seed, 'run', startX, uncapped);
   recorder.start(game);
-  bot?.start(game.seed);
+  bot?.start(game.seed, uncapped);
   // the server times the run from here, which caps the score it will accept
   best = loadBest();
   ticket = ranked ? api.ticket(game.seed, daily).catch(() => null) : Promise.resolve(null);
@@ -384,7 +386,7 @@ function roomChanged() {
     if (room.phase === 'racing' && me?.status === 'watching' && !watching && game.phase !== 'run' && !countdown.goAt) {
       // joined mid-round: watch it on its road
       watching = true;
-      game = createGame(room.seed, 'over');
+      game = createGame(room.seed, 'over', 0, room.uncapped);
     }
     if (room.phase !== 'racing') watching = false;
     if (room.phase === 'results' && game.phase === 'over') hud.hideMessage(); // the card shows the scores
