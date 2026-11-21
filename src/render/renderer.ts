@@ -39,6 +39,9 @@ export interface Renderer {
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
+/** Segments per side of the vapor cone (each a step of opacity and width). */
+const CONE_STEPS = 8;
+
 /** Most off-screen arrows kept apart from each other (one per rival in a full room). */
 const MAX_ARROWS = 8;
 /** Screen positions of the arrows drawn so far this frame (x, y pairs; reused). */
@@ -215,30 +218,35 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
   }
 
   /**
-   * Uncapped, near and past the sound barrier: a V of vapor trailing the car, from its
-   * nose back along its direction of travel. Fades in from UNCAPPED.coneSpeed and
-   * narrows as the car gets faster.
+   * Uncapped, near and past the sound barrier: a V of vapor around the car, its tip a
+   * little ahead of the nose, dense there and thinning out to nothing at the ends
+   * (drawn as CONE_STEPS segments of falling opacity and width: no gradient objects per
+   * frame). Fades in from UNCAPPED.coneSpeed and narrows as the car gets faster.
    */
   function drawCone(g: GameState, x: number, y: number) {
     const v = speedOf(g);
     if (v < UNCAPPED.coneSpeed || g.phase === 'over') return;
     const fade = Math.min(1, (v - UNCAPPED.coneSpeed) / (UNCAPPED.boomSpeed - UNCAPPED.coneSpeed));
     const half = Math.max(0.3, 0.75 - ((v - UNCAPPED.coneSpeed) / UNCAPPED.boomSpeed) * 0.6); // half-angle (rad)
-    const len = 46 + 30 * fade;
+    const len = 50 + 34 * fade;
+    const tip = CAR.length / 2 + UNCAPPED.coneLead; // ahead of the car's centre
+    const dx = -Math.cos(half) * len, dy = Math.sin(half) * len;
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(Math.atan2(g.car.vy, g.car.vx));
-    ctx.globalAlpha = fade;
     ctx.strokeStyle = colors.cone;
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'butt';
-    const nose = CAR.length / 2 + 2;
-    const bx = Math.cos(half) * len, by = Math.sin(half) * len;
-    ctx.beginPath();
-    ctx.moveTo(nose - bx, -by);
-    ctx.lineTo(nose, 0);
-    ctx.lineTo(nose - bx, by);
-    ctx.stroke();
+    ctx.lineCap = 'round';
+    for (let k = 0; k < CONE_STEPS; k++) {
+      const t0 = k / CONE_STEPS, t1 = (k + 1) / CONE_STEPS, mid = (t0 + t1) / 2;
+      ctx.globalAlpha = fade * (1 - mid) * (1 - mid); // solid at the tip, gone at the ends
+      ctx.lineWidth = 3 - 2 * mid;
+      ctx.beginPath();
+      ctx.moveTo(tip + dx * t0, -dy * t0);
+      ctx.lineTo(tip + dx * t1, -dy * t1);
+      ctx.moveTo(tip + dx * t0, dy * t0);
+      ctx.lineTo(tip + dx * t1, dy * t1);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
