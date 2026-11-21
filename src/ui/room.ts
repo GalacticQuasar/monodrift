@@ -27,6 +27,15 @@ export interface RoomCardActions {
   leave(): void;
   /** Try making a room again, after it failed. */
   retryCreate(): void;
+  /**
+   * Name to offer as the player's leaderboard name on the results card (their room
+   * name), or null when not to offer (they have one, or said no before).
+   */
+  leaderboardOffer(): string | null;
+  /** Register `name` on the leaderboard; rejects with a message to show. */
+  saveLeaderboardName(name: string): Promise<void>;
+  /** Not now: don't offer again. */
+  declineLeaderboard(): void;
 }
 
 const ERRORS: Record<SessionError, string> = {
@@ -153,8 +162,32 @@ export function createRoomCard(card: HTMLElement, act: RoomCardActions): RoomCar
       list,
       roadRow(s, room.road),
       el('p', { textContent: note }),
+      ...(results ? leaderboardLine() : []),
       el('div', { className: 'buttons' }, inviteButton(room.code), ready),
     );
+  }
+
+  /** "Put your scores on the leaderboard as Mo?" for players without a leaderboard name. */
+  function leaderboardLine(): HTMLElement[] {
+    const name = act.leaderboardOffer();
+    if (!name) return [];
+    const text = el('span', { textContent: `Put your scores on the leaderboard as ${name}? ` });
+    const save = button('Save', async () => {
+      save.disabled = true;
+      try {
+        await act.saveLeaderboardName(name);
+        line.replaceChildren(`Saved: your scores go on the leaderboard as ${name}.`);
+      } catch (e) {
+        save.disabled = false;
+        text.textContent = `Couldn't save ${name}: ${(e as Error).message}. Pick another name in Leaderboard. `;
+      }
+    }, { className: 'link' });
+    const no = button('No thanks', () => {
+      act.declineLeaderboard();
+      line.remove();
+    }, { className: 'link' });
+    const line = el('p', { className: 'offer' }, text, save, ' · ', no);
+    return [line];
   }
 
   function hide() {

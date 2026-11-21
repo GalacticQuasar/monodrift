@@ -38,12 +38,13 @@ export interface GameState {
 
 export type StepEvent = 'crash';
 
-export function createGame(seed: number, phase: Phase = 'ready'): GameState {
+/** `startX`: sideways start position (multiplayer rooms put each car in its own lane; 0 = centre). */
+export function createGame(seed: number, phase: Phase = 'ready', startX = 0): GameState {
   return {
     phase,
     seed,
     track: createTrack(createRng(seed)),
-    car: createCar(),
+    car: createCar(startX),
     trackIndex: TRACK.startIndex,
     skids: createSkids(),
     score: 0,

@@ -6,6 +6,8 @@ A minimal top-down drift game for desktop and mobile. Stay on the road; the
 car speeds up the longer you survive. Zen mode turns off crashes and scoring, and there's a dark mode in Settings.
 In **Settings**, switch **Road** to *Daily* to race everyone on the same road (new one at midnight
 UTC), and pick a name to get on the **leaderboard** (today and all-time).
+**Drive with a friend** (on the start screen, or Friends in Settings) makes a room: send the link,
+and you race on the same road with each other's cars on screen.
 
 **Play it:** [monodrift.galacticquasar.dev](https://monodrift.galacticquasar.dev). After the first
 visit it also works offline, and it can be added to a phone's home screen.
@@ -40,6 +42,19 @@ publishes every push to `main`: the static game from `dist/`, plus a small Worke
 (`worker/`) for the leaderboard API at `/api/*`, backed by a D1 database. Schema
 changes in `migrations/` are applied with
 `npx wrangler d1 migrations apply monodrift --remote`.
+
+### Multiplayer rooms
+
+Each room is a Cloudflare Durable Object (`worker/room.ts`, one per 4-letter code)
+holding the players' WebSockets. It only relays: every game simulates its own car
+and sends its pose 15 times a second; the room passes poses on and runs the lobby,
+the countdown and the results (rules in `worker/room-logic.ts`, protocol in
+`src/lib/room-protocol.ts`). The other car is drawn ~120 ms behind, interpolated
+(`src/net/rivals.ts`). Room rounds are Normal speed and ranked like solo runs.
+
+To try it locally, run `npm run api` and `npm run dev`, and open the room link in two
+browser windows. `?debug&bot` adds an autopilot rival to solo runs (no server needed),
+for working on how rivals are drawn.
 
 ### Leaderboard checks
 
@@ -80,19 +95,20 @@ src/
     daily.ts       daily road seed (same road for everyone per UTC day)
     rng.ts         seeded RNG (mulberry32)
   input/           pointer + keyboard → SteerIntent
+  net/             multiplayer: room WebSocket session, rival cars (pose playback), debug bot
   render/          canvas drawing (reads state, never writes it)
     renderer.ts    draws the layers: background, road, skids, firelight, car, scenery
     camera.ts      follows the car
     scenery.ts     seeded trees and campfires on a world grid, kept off the road
     sprites.ts     pixel-art sprites (procedural trees, src/art files) + the device-scaled atlas
   ui/              DOM: HUD, settings buttons, cursor auto-hide, install card,
-                   leaderboard panel + name card, ?debug panel
+                   leaderboard panel + name card, room card, ?debug panel
   art/             hand-drawn pixel art (*.json, one string per row) + palettes.ts
   lib/             helpers: guarded localStorage, leaderboard API client, name rules,
-                   pixel-art format/validation
-worker/            Cloudflare Worker: leaderboard API (/api/*), run tickets
+                   pixel-art format/validation, pose recording/packing, room protocol
+worker/            Cloudflare Worker: leaderboard API (/api/*), run tickets, Room Durable Object
 migrations/        D1 database schema
-tests/             Vitest tests for sim/, scenery, leaderboard rules and pixel art
+tests/             Vitest tests for sim/, scenery, leaderboard rules, pixel art, poses and rooms
 tools/pixel-editor/ dev-only pixel editor for src/art (saves via vite.config.ts)
 docs/
   art-style.md     pixel art rules and how to add new visual assets

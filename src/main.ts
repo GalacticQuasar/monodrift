@@ -1,5 +1,5 @@
 import './style.css';
-import { COLORS, MAX_FRAME_TIME, SIM_HZ, SPEED, TRACK, UI } from './config';
+import { COLORS, MAX_FRAME_TIME, NET, SIM_HZ, SPEED, TRACK, UI } from './config';
 import { createInput } from './input/input';
 import { DESKTOP } from './lib/device';
 import { KEYS, storage } from './lib/storage';
@@ -69,9 +69,11 @@ let ticket: Promise<string | null> = Promise.resolve(null);
 /** The room the player is in, if any (?room=CODE in the URL while in one). */
 let session: RoomSession | null = null;
 /** Room round counting down: performance.now() when it goes (0: none), and its details. */
-let countdown = { goAt: 0, round: 0, seed: 0, daily: false, shown: 0 };
+let countdown = { goAt: 0, round: 0, seed: 0, daily: false, startX: 0, shown: 0 };
 /** In a room but not in the current round (joined mid-round, or lost the connection). */
 let watching = false;
+/** The last room run of a player without a leaderboard name: posted if they save one. */
+let lastRoomRun: { ticket: Promise<string | null>; score: number } | null = null;
 /** Counts "Drive with a friend" attempts, so one abandoned meanwhile is dropped. */
 let roomAttempt = 0;
 
@@ -161,8 +163,8 @@ const input = createInput(canvas, {
 });
 
 /** Start driving road `seed`. `ranked`: get a leaderboard ticket (Normal speed, no zen). */
-function startRun(seed: number, ranked: boolean, daily: boolean) {
-  game = createGame(seed, 'run');
+function startRun(seed: number, ranked: boolean, daily: boolean, startX = 0) {
+  game = createGame(seed, 'run', startX);
   recorder.start(game);
   bot?.start(game.seed);
   // the server times the run from here, which caps the score it will accept
@@ -232,6 +234,14 @@ const roomCard = createRoomCard($('#room'), {
   road: r => session?.setRoad(r),
   leave: () => leaveRoom(),
   retryCreate: () => startRoom(),
+  leaderboardOffer: () => (player() || storage.get(KEYS.namePrompt) ? null : storage.get(KEYS.roomName)),
+  async saveLeaderboardName(name) {
+    await api.register(name);
+    // the round just driven counts too (its ticket is still unused)
+    if (lastRoomRun) leaderboard.runEnded(lastRoomRun.ticket, lastRoomRun.score, () => {});
+    lastRoomRun = null;
+  },
+  declineLeaderboard: () => storage.set(KEYS.namePrompt, 'skipped'),
 });
 
 /** "Drive with a friend": make a room, then join it. */
@@ -321,8 +331,12 @@ function roundStarting(round: number, seed: number, daily: boolean, inMs: number
   paused = false;
   input.clear();
   egg.hide();
-  game = createGame(seed); // the road, on screen during the countdown
-  countdown = { goAt: performance.now() + inMs, round, seed, daily, shown: 0 };
+  // each player in their own lane, by room order: centred on the road, NET.startSpread apart
+  const players = session?.room?.players ?? [];
+  const lane = Math.max(0, players.findIndex(p => p.id === session?.you));
+  const startX = (lane - (players.length - 1) / 2) * NET.startSpread;
+  game = createGame(seed, 'ready', startX); // the road, on screen during the countdown
+  countdown = { goAt: performance.now() + inMs, round, seed, daily, startX, shown: 0 };
   hideMenuCards();
 }
 
@@ -336,7 +350,7 @@ function updateCountdown(now: number) {
     return;
   }
   countdown.goAt = 0;
-  startRun(countdown.seed, true, countdown.daily);
+  startRun(countdown.seed, true, countdown.daily, countdown.startX);
   session.beginRun(countdown.round);
   session.sendPoses(recorder.log); // the starting pose, so the others see the car right away
 }
@@ -349,8 +363,9 @@ function roomRunEnded() {
     storage.set(bestKey(), String(best));
   }
   showRoomSpectating();
-  // ranked like a solo Normal run; without a name, no "pick a name" card in a room
+  // ranked like a solo Normal run; without a name, the results card offers to save one
   if (player()) leaderboard.runEnded(ticket, score, () => {});
+  else lastRoomRun = { ticket, score };
   debug?.event('crash (room)');
 }
 

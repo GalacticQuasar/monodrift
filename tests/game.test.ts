@@ -17,6 +17,14 @@ describe('game', () => {
     expect({ car: g.car, score: g.score }).toEqual(before);
   });
 
+  it('can start off-centre (room lanes) without changing anything else', () => {
+    const a = createGame(5), b = createGame(5, 'ready', 18);
+    expect(b.car.x).toBe(18);
+    expect(b.car.prevX).toBe(18);
+    expect({ ...b.car, x: 0, prevX: 0 }).toEqual(a.car);
+    expect(b.track.pts).toEqual(a.track.pts);
+  });
+
   it('is deterministic: same seed + same inputs = same run', () => {
     const run = () => {
       const g = createGame(99, 'run');

@@ -17,16 +17,17 @@ export interface Car {
 /** Either turn at a rate (-1..1), or swing toward an absolute heading. */
 export type Steer = { rate: number } | { target: number };
 
-export function createCar(): Car {
+/** `x`: sideways start position (multiplayer rooms spread the cars out; 0 = centre). */
+export function createCar(x = 0): Car {
   const h = -Math.PI / 2;
   return {
-    x: 0,
+    x,
     y: CAR.startY,
     h,
     vx: 0,
     vy: CAR.startVy,
     speed: CAR.startSpeed,
-    prevX: 0,
+    prevX: x,
     prevY: CAR.startY,
     prevH: h,
   };

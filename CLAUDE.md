@@ -5,7 +5,7 @@ no framework, canvas 2D. See `README.md` for the file layout.
 
 ## Commands
 
-- `npm run dev`: dev server · `npm test`: Vitest (sim, scenery, leaderboard rules; no browser)
+- `npm run dev`: dev server · `npm test`: Vitest (sim, scenery, leaderboard and room rules; no browser)
 - `npm run build`: typecheck + production build into `dist/` (static site)
 - `npm run typecheck`: typecheck the game (`tsc`) and the Worker (`tsc -p worker`)
 - `npm run api`: leaderboard API locally (local Worker + local D1 database on :8787;
@@ -19,12 +19,20 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - `src/render/` reads game state and never changes it. Scenery is render-only
   and also seeded.
 - `src/input/` turns events into a `SteerIntent`; `src/ui/` is DOM (HUD,
-  settings, leaderboard, install card, debug panel). `src/main.ts` wires them together.
+  settings, leaderboard, install card, room card, debug panel). `src/main.ts` wires them together.
 - All tuning numbers live in `src/config.ts`.
 - Leaderboard: `worker/` is the Cloudflare Worker for `/api/*` (D1 database,
   schema in `migrations/`). It shares pure code with the game (`sim/daily.ts`,
   `sim/scoring.ts` `maxScoreAfter`, `lib/names.ts`). No replays: a signed run ticket
   times each run and caps the score (see `SCORE.maxProgressPerPx`).
+- Multiplayer rooms: one `Room` Durable Object per 4-letter code (`worker/room.ts`,
+  WebSocket hibernation; routes in `worker/rooms.ts`) only relays pose samples and runs
+  lobby/countdown/results; rules are the pure `worker/room-logic.ts` (tested), messages
+  in `lib/room-protocol.ts` (bump `PROTOCOL` on incompatible changes). The game side is
+  `src/net/` (session, rivals) and `ui/room.ts`. Other cars are *rivals* drawn from pose
+  samples (`lib/poses.ts`, never simulated); every run is recorded by
+  `lib/run-recorder.ts`, meant for ghost races later too. `?debug&bot` adds a local
+  autopilot rival.
 - Offline: `src/sw.js` is a service worker template; the plugin in
   `vite.config.ts` fills in the file list and version at build time. It only runs
   in production builds (test offline with `npm run build && npm run preview`).
@@ -38,7 +46,7 @@ no framework, canvas 2D. See `README.md` for the file layout.
   `TICKET_SECRET`. Schema changes go in a new `migrations/NNNN_*.sql`, applied with
   `npx wrangler d1 migrations apply monodrift --remote` (needs `npx wrangler login`)
   **before** pushing code that depends on them.
-- Never write test data to the live API/database (no test players or scores); test
+- Never write test data to the live API/database (no test players, scores or rooms); test
   against `npm run api`. Read-only checks on live are fine (`GET /api/leaderboard`,
   `POST /api/tickets`, a rejected `POST /api/scores`).
 - After a deploy the service worker can serve the previous version for one load:
@@ -52,13 +60,20 @@ no framework, canvas 2D. See `README.md` for the file layout.
 - The daily road seed comes from the UTC date (`sim/daily.ts`). Starting a run from
   the start screen keeps the road already on screen; retries get a new one.
 - Settings and identity live in localStorage under `monodrift-*` (`lib/storage.ts`).
-- Two top buttons only: Leaderboard and Settings (icons on phones). Road, Zen, Speed,
+- Two top buttons only: Leaderboard and Settings (icons on phones). "Drive with a friend"
+  is a link under the start/game-over message plus a Friends row in Settings. Road, Zen, Speed,
   Steering, Sensitivity, Trees and Dark live in the Settings panel (`ui/settings.ts`); changing Road, Zen
   or Speed starts over. Opening Settings mid-run pauses the run; after closing it, the next
-  tap/key resumes. Sensitivity scales steering in `input/`, never in the sim.
+  tap/key resumes (not in a room, see below). Sensitivity scales steering in `input/`, never in the sim.
 - Speed (Slow/Normal/Fast, `SPEED` in `config.ts`) scales game time via the sim's
   `speed` rule. Only Normal runs are ranked (no ticket otherwise; a note under the
   picker says so), and each speed keeps its own local best.
+- In a room (`?room=CODE`): rounds start from the room (countdown), not a tap; they're
+  always Normal speed with crashes on (Road/Zen/Speed locked in Settings), each car in its
+  own lane (`NET.startSpread`). Settings doesn't pause a room run, and hiding the tab
+  counts as a crash. After crashing you watch the rival. Room runs are ranked like solo
+  Normal runs; players without a leaderboard name are offered their room name on the
+  results card. Max 2 players (`ROOM.maxPlayers`).
 - Dark mode: the Dark setting (Off by default / On / Auto follows the device) sets
   `data-theme` on `<html>` (`ui/theme.ts`; an inline script in `index.html` does it
   before first paint). The canvas uses `COLORS.light`/`COLORS.dark`, the DOM uses the
