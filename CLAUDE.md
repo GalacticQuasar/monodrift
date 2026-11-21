@@ -67,10 +67,12 @@ no framework, canvas 2D. See `README.md` for the file layout.
   or Speed starts over. Opening Settings mid-run pauses the run; after closing it, the next
   tap/key resumes (not in a room, see below). Sensitivity scales steering in `input/`, never in the sim.
 - Speed (Slow/Normal/Fast/Uncapped, `SPEED` in `config.ts`) scales game time via the sim's
-  `speed` rule. Uncapped (sim `uncapped` rule) is Normal until top speed, then
-  `GameState.pace` keeps growing (by `CAR.accel / CAR.maxSpeed` per second) and scales
-  the whole car sim, so it gets faster forever while steering keeps up (same curves,
-  quicker). Rooms can pick Uncapped too (room Speed setting); those rounds aren't ranked. Only Normal runs are ranked (no ticket otherwise; a note under the
+  `speed` rule. Uncapped (sim `uncapped` rule): speed is a cubic of distance
+  (`uncappedSpeed`, `UNCAPPED` in `config.ts`): fast at first, level near the sound
+  barrier (750 px/s at 400 points), then faster and faster. It works by scaling the
+  whole car sim (`GameState.pace`), so steering keeps up (same curves, quicker). A vapor
+  cone shows from 650 px/s; at 750 the sim returns a `boom` event (shockwave ring and
+  screen shake, no text). Rooms can pick Uncapped too (room Speed setting); those rounds aren't ranked. Only Normal runs are ranked (no ticket otherwise; a note under the
   picker says so), and each speed keeps its own local best.
 - In a room (`?room=CODE`): rounds start from the room (countdown), not a tap; they're
   Normal pace (or Uncapped if the room says so) with crashes on (Road/Zen/Speed locked in Settings), each car in its

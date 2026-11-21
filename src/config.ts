@@ -122,6 +122,23 @@ export const INPUT = {
   sensitivity: [0.7, 0.85, 1, 1.15, 1.3],
 } as const;
 
+/**
+ * Uncapped speed: the car's speed (px/s) follows a cubic of the distance driven, in
+ * points: it climbs fast at first, levels off near the "sound barrier" (boomSpeed, at
+ * boomScore points), breaks it with a sonic boom, then climbs faster and faster.
+ *   speed(s) = boomSpeed + (boomSpeed - CAR.startSpeed) * ((s - boomScore) / boomScore)^3
+ * With these numbers (a real drive): the vapor cone at ~21 s, the boom at ~42 s, 900 px/s at ~62 s.
+ */
+export const UNCAPPED = {
+  boomSpeed: 750,
+  boomScore: 400,
+  /** The vapor cone behind the car starts showing at this speed, full by boomSpeed. */
+  coneSpeed: 650,
+  /** Boom shockwave: how long the ring grows, and how far (px). */
+  shockMs: 700,
+  shockRadius: 420,
+} as const;
+
 /** Other cars on the road (multiplayer rivals; later, ghosts). */
 export const NET = {
   /** A pose sample is taken (and sent) every this many sim steps: 120 Hz / 8 = 15 a second. */
@@ -245,6 +262,9 @@ export interface Palette {
   readonly rivalCar: string;
   readonly rivalWindshield: string;
   readonly rivalLabel: string;
+  /** Uncapped: the vapor cone behind the car near the sound barrier, and the boom's shockwave ring. */
+  readonly cone: string;
+  readonly shock: string;
   readonly skid: string;
   /** Multiplies SKIDS.maxAlpha (marks need more strength on a dark road). */
   readonly skidStrength: number;
@@ -272,6 +292,8 @@ export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
     rivalCar: '#7d7d7d',
     rivalWindshield: '#e8e8e8',
     rivalLabel: '#555',
+    cone: 'rgba(0,0,0,0.22)',
+    shock: 'rgba(0,0,0,0.5)',
     skid: '#000',
     skidStrength: 1,
     treeShadow: 'rgba(0,0,0,0.1)',
@@ -293,6 +315,8 @@ export const COLORS: { readonly light: Palette; readonly dark: Palette } = {
     rivalCar: '#9a9a9a',
     rivalWindshield: '#1b1b1b',
     rivalLabel: '#aaa',
+    cone: 'rgba(255,255,255,0.28)',
+    shock: 'rgba(255,255,255,0.6)',
     skid: '#000',
     skidStrength: 2,
     treeShadow: 'rgba(0,0,0,0.35)',

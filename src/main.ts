@@ -45,7 +45,7 @@ const recorder = createRunRecorder();
 const bot = debug && new URLSearchParams(location.search).has('bot') ? createBot() : null;
 const botRivals: Rival[] = bot ? [bot.rival] : [];
 /** Other cars for the renderer (reused every frame): the room's rivals while in one. */
-const view: View = { rivals: botRivals, follow: null, carColor: null }; // carColor: set from Settings below
+const view: View = { rivals: botRivals, follow: null, carColor: null, boom: { x: 0, y: 0, at: -1 } }; // carColor: set from Settings below
 autoHideCursor();
 const install = createInstallPrompt($('#install'));
 const news = createNews($('#news'), __LATEST_NOTES__);
@@ -203,10 +203,23 @@ function tick(dt: number) {
   const rules = session ? ROOM_RULES : { crash: !settings.zen, speed: SPEED[settings.speed], uncapped: settings.speed === 'uncapped' };
   bot?.tick(dt, rules);
   if (game.phase !== 'run') return;
-  const crashed = step(game, input.intent(), dt, rules) === 'crash';
+  const event = step(game, input.intent(), dt, rules);
+  if (event === 'boom') sonicBoom();
+  const crashed = event === 'crash';
   recorder.record(game, crashed);
   session?.sendPoses(recorder.log);
   if (crashed) runEnded();
+}
+
+/** Uncapped broke the sound barrier: a shockwave from the car, and the screen shakes. */
+function sonicBoom() {
+  view.boom.x = game.car.x;
+  view.boom.y = game.car.y;
+  view.boom.at = performance.now();
+  canvas.classList.remove('egg-shake');
+  void canvas.offsetWidth; // restart the shake
+  canvas.classList.add('egg-shake');
+  debug?.event('sonic boom');
 }
 
 /** The run is over (crashed, or a room run cut short). */

@@ -1,8 +1,8 @@
 // Draws a GameState. Read-only: never modifies the state.
 
-import { CAMPFIRE, CAR, carColorValue, NET, ROAD_EDGE, SCENERY, SKIDS, TRACK, VIEW, type Palette } from '../config';
+import { CAMPFIRE, CAR, carColorValue, NET, ROAD_EDGE, SCENERY, SKIDS, TRACK, UNCAPPED, VIEW, type Palette } from '../config';
 import type { Rival } from '../net/rivals';
-import type { GameState } from '../sim/game';
+import { speedOf, type GameState } from '../sim/game';
 import { distanceScore } from '../sim/scoring';
 import { followCar } from './camera';
 import { createScenery, type Prop, type Scenery } from './scenery';
@@ -19,9 +19,11 @@ export interface View {
   follow: Rival | null;
   /** The player's car colour id (config.ts CAR_COLORS), or null for the default. */
   carColor: string | null;
+  /** Uncapped sonic boom: where (world px) and when (`now` clock, ms; -1 = none) the shockwave started. */
+  boom: { x: number; y: number; at: number };
 }
 
-const NO_VIEW: View = { rivals: [], follow: null, carColor: null };
+const NO_VIEW: View = { rivals: [], follow: null, carColor: null, boom: { x: 0, y: 0, at: -1 } };
 
 export interface Renderer {
   /**
@@ -148,7 +150,9 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
       if (props && colors.glow) drawProps(props, cam, frame, true);
       if (layers.has('car')) {
         drawRivals(rivals); // under the player's own car
+        drawCone(g, cx, cy);
         drawCar(cx, cy, ch, carColorValue(view.carColor, colors.theme) ?? colors.car, colors.windshield);
+        drawShock(view.boom, now);
       }
       // scenery last, so an off-road car (zen) drives under trees
       if (props) drawProps(props, cam, frame, false);
@@ -208,6 +212,49 @@ export function createRenderer(canvas: HTMLCanvasElement, colors: Palette, layer
     ctx.fillStyle = windshield;
     ctx.fillRect(4, -5, 4, 10);
     ctx.restore();
+  }
+
+  /**
+   * Uncapped, near and past the sound barrier: a V of vapor trailing the car, from its
+   * nose back along its direction of travel. Fades in from UNCAPPED.coneSpeed and
+   * narrows as the car gets faster.
+   */
+  function drawCone(g: GameState, x: number, y: number) {
+    const v = speedOf(g);
+    if (v < UNCAPPED.coneSpeed || g.phase === 'over') return;
+    const fade = Math.min(1, (v - UNCAPPED.coneSpeed) / (UNCAPPED.boomSpeed - UNCAPPED.coneSpeed));
+    const half = Math.max(0.3, 0.75 - ((v - UNCAPPED.coneSpeed) / UNCAPPED.boomSpeed) * 0.6); // half-angle (rad)
+    const len = 46 + 30 * fade;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.atan2(g.car.vy, g.car.vx));
+    ctx.globalAlpha = fade;
+    ctx.strokeStyle = colors.cone;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'butt';
+    const nose = CAR.length / 2 + 2;
+    const bx = Math.cos(half) * len, by = Math.sin(half) * len;
+    ctx.beginPath();
+    ctx.moveTo(nose - bx, -by);
+    ctx.lineTo(nose, 0);
+    ctx.lineTo(nose - bx, by);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /** The sonic boom: a ring bursting out from where it happened, fading as it grows. */
+  function drawShock(b: View['boom'], now: number) {
+    if (b.at < 0) return;
+    const p = (now - b.at) / UNCAPPED.shockMs;
+    if (p < 0 || p >= 1) return;
+    const ease = 1 - (1 - p) * (1 - p) * (1 - p); // fast out, slowing
+    ctx.globalAlpha = 1 - p;
+    ctx.strokeStyle = colors.shock;
+    ctx.lineWidth = 6 - 4 * p;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, Math.max(1, ease * UNCAPPED.shockRadius), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 
   /** Other players' cars; a crashed one stays where it went off, faded. */

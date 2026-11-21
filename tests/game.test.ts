@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CAR } from '../src/config';
-import { crashedAtStart, createGame, step, type SteerIntent } from '../src/sim/game';
+import { CAR, UNCAPPED } from '../src/config';
+import { crashedAtStart, createGame, speedOf, step, uncappedSpeed, type SteerIntent } from '../src/sim/game';
 
 const DT = 1 / 120;
 const ON = { crash: true };
@@ -26,15 +26,39 @@ describe('game', () => {
     expect(b.track.pts).toEqual(a.track.pts);
   });
 
-  it('uncapped: past the top speed the game keeps speeding up, at the car\'s acceleration', () => {
+  it('uncapped: speed is a cubic of distance, level at the sound barrier', () => {
+    expect(uncappedSpeed(0)).toBeCloseTo(CAR.startSpeed);
+    expect(uncappedSpeed(UNCAPPED.boomScore)).toBe(UNCAPPED.boomSpeed);
+    // flat around the barrier, steep away from it
+    const slope = (s: number) => uncappedSpeed(s + 1) - uncappedSpeed(s);
+    expect(slope(UNCAPPED.boomScore)).toBeLessThan(0.01);
+    expect(slope(0)).toBeGreaterThan(3);
+    expect(slope(2 * UNCAPPED.boomScore)).toBeGreaterThan(3);
+  });
+
+  it('uncapped: the car follows the curve and booms once, near the boom score', () => {
     const run = (uncapped: boolean) => {
       const g = createGame(4, 'run');
-      for (let i = 0; i < 120 * 60; i++) step(g, { kind: 'rate', rate: 0 }, DT, { crash: false, uncapped });
-      return g;
+      const events: { t: number; score: number; speed: number }[] = [];
+      for (let i = 0; i < 120 * 70; i++) {
+        // autopilot (zen, so a slip doesn't end it): keeps the car on the road, so distance grows
+        const tgt = g.track.pts[g.trackIndex + 4];
+        let d = Math.atan2(tgt.y - g.car.y, tgt.x - g.car.x) - g.car.h;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        if (step(g, { kind: 'rate', rate: Math.max(-1, Math.min(1, d * 6)) }, DT, { crash: false, uncapped }) === 'boom')
+          events.push({ t: i * DT, score: g.score, speed: speedOf(g) });
+      }
+      return { g, events };
     };
-    expect(run(false).pace).toBe(1); // never moves outside Uncapped
-    const tTop = (CAR.maxSpeed - CAR.startSpeed) / CAR.accel; // ~27 s to top speed
-    expect(run(true).pace).toBeCloseTo(1 + (CAR.accel / CAR.maxSpeed) * (60 - tTop), 1);
+    const capped = run(false);
+    expect(capped.g.pace).toBe(1); // never moves outside Uncapped
+    expect(capped.events).toEqual([]);
+    const { g, events } = run(true);
+    expect(events).toHaveLength(1);
+    expect(events[0].speed).toBeGreaterThanOrEqual(UNCAPPED.boomSpeed);
+    expect(Math.abs(events[0].score - UNCAPPED.boomScore)).toBeLessThan(20);
+    expect(g.boomed).toBe(true);
+    expect(speedOf(g)).toBeGreaterThan(UNCAPPED.boomSpeed); // and faster since
   });
 
   it('uncapped: at double pace the car traces the same curve in half the time', () => {

@@ -1,7 +1,7 @@
 // The whole simulation. No DOM, no clock, no Math.random: the same seed and the
 // same sequence of intents always produce the same run.
 
-import { CAR, ROAD_EDGE, TRACK } from '../config';
+import { CAR, ROAD_EDGE, SCORE, TRACK, UNCAPPED } from '../config';
 import { createCar, slipOf, updateCar, type Car, type Steer } from './car';
 import { createRng } from './rng';
 import { distanceScore } from './scoring';
@@ -24,9 +24,9 @@ export interface Rules {
   /** Game-speed multiplier (Speed setting); 1 when left out. */
   speed?: number;
   /**
-   * Uncapped: once the car reaches its top speed, the game keeps speeding up (see
-   * GameState.pace) instead of holding it, so the car gets faster forever while still
-   * turning through the same lines.
+   * Uncapped: no top speed. The car's speed follows uncappedSpeed() of the distance
+   * driven (with a sonic boom at UNCAPPED.boomSpeed), by running the whole car faster
+   * (GameState.pace), so it still turns through the same lines, just quicker.
    */
   uncapped?: boolean;
 }
@@ -41,14 +41,25 @@ export interface GameState {
   score: number;
   aim: { gesture: number; anchor: number } | null;
   /**
-   * Uncapped's extra speed-up (1 = none): everything the car does runs this much faster.
-   * Grows by CAR.accel / CAR.maxSpeed per second at top speed, as if the car kept
-   * accelerating, with steering and grip keeping up (same curves, just quicker).
+   * Uncapped's speed-up (1 = none): everything the car does (moving, steering, grip)
+   * runs this much faster, so the speed is car.speed * pace and the curves stay the same.
    */
   pace: number;
+  /** Uncapped: the sonic boom has happened this run. */
+  boomed: boolean;
 }
 
-export type StepEvent = 'crash';
+/** Uncapped: the speed (px/s) for `points` of distance driven (see UNCAPPED). */
+export function uncappedSpeed(points: number): number {
+  const u = (points - UNCAPPED.boomScore) / UNCAPPED.boomScore;
+  return UNCAPPED.boomSpeed + (UNCAPPED.boomSpeed - CAR.startSpeed) * u * u * u;
+}
+
+/** The car's actual speed (px/s), Uncapped's pace included. */
+export const speedOf = (g: GameState): number => g.car.speed * g.pace;
+
+/** crash: the run ended; boom: Uncapped broke the sound barrier (once per run). */
+export type StepEvent = 'crash' | 'boom';
 
 /** `startX`: sideways start position (multiplayer rooms put each car in its own lane; 0 = centre). */
 export function createGame(seed: number, phase: Phase = 'ready', startX = 0): GameState {
@@ -62,6 +73,7 @@ export function createGame(seed: number, phase: Phase = 'ready', startX = 0): Ga
     score: 0,
     aim: null,
     pace: 1,
+    boomed: false,
   };
 }
 
@@ -69,7 +81,11 @@ export function createGame(seed: number, phase: Phase = 'ready', startX = 0): Ga
 export function step(g: GameState, intent: SteerIntent, dt: number, rules: Rules): StepEvent | null {
   if (g.phase !== 'run') return null;
   dt *= rules.speed ?? 1;
-  if (rules.uncapped && g.car.speed >= CAR.maxSpeed) g.pace += (CAR.accel / CAR.maxSpeed) * dt;
+  if (rules.uncapped) {
+    // distance driven, in (unrounded) points: the speed curve's input
+    const points = ((g.trackIndex - TRACK.startIndex) * TRACK.segmentLength) / SCORE.pxPerPoint;
+    g.pace = Math.max(1, uncappedSpeed(points) / g.car.speed);
+  }
   dt *= g.pace;
 
   updateCar(g.car, resolveSteer(g, intent), dt);
@@ -84,6 +100,10 @@ export function step(g: GameState, intent: SteerIntent, dt: number, rules: Rules
   if (rules.crash && near.distSq > ROAD_EDGE ** 2) {
     g.phase = 'over';
     return 'crash';
+  }
+  if (rules.uncapped && !g.boomed && speedOf(g) >= UNCAPPED.boomSpeed) {
+    g.boomed = true;
+    return 'boom';
   }
   return null;
 }
