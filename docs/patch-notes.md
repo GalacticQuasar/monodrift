@@ -5,6 +5,25 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-21
+
+- Covers: `83dd017` to `208fb9d` (multiplayer rooms, curb, grip, start screen hints)
+- Last commit: `208fb9d`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Drive with a friend**: tap "Drive with a friend" on the start screen (or Friends in Settings) and send your friend the link. You both drive the same road at the same time and see each other's car, with an arrow at the screen edge when they're out of view
+- **Rounds**: when you're both ready, a 3-2-1 countdown starts the round. Crash first and you watch your friend until they crash too, then see who went further and go again. Pick a random road or today's Daily road. Room runs count for the leaderboard like normal runs
+
+**Controls and feel**
+- **Curb**: a grey curb now runs along both edges of the road. You can drive on it; the run ends past it
+- **Grip**: the car grips a little less, so slides last slightly longer
+
+**Polish**
+- **Start screen**: on a computer it shows the keys to steer with, and on a phone in Sides mode, arrows at the screen edges show where to hold
+
 ## 2026-11-15
 
 - Covers: `01d6928` to `80293d5` (Speed setting, campfires, What's new page)
