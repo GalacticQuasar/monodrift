@@ -5,6 +5,21 @@ Player-facing update notes, newest first. Made with the `patch-notes` skill
 This file is the source of https://monodrift.galacticquasar.dev/updates and the
 in-game "updated" card: keep the entry format the skill describes.
 
+## 2026-11-21 (5)
+
+- Covers: `ae8f051` to `c740c26` (win rules, trophy, ghost player fix)
+- Last commit: `c740c26`
+
+**Monodrift**: a minimal top-down drift game. Play at https://monodrift.galacticquasar.dev
+What's new: https://monodrift.galacticquasar.dev/updates
+
+**Big new stuff**
+- **Last standing**: a new way to win in rooms. The last car still on the road wins, and the room picks whether the winner stops right there or keeps driving for score. "Furthest" (highest score wins) is still there
+- **Trophy**: the winner of each round gets a trophy that bursts onto the screen. Everyone else sees who won
+
+**Controls and feel**
+- **Rooms**: reloading the page no longer leaves a copy of you behind in the room, which could stop a round from starting
+
 ## 2026-11-21 (4)
 
 - Covers: `7c311a3` to `75bf6ee` (car colours)
