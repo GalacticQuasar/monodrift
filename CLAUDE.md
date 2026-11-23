@@ -107,7 +107,7 @@ no framework, canvas 2D. See `README.md` for the file layout.
   for buttons, titles and the score; system sans for body text. Buttons and panels
   use the notched pixel frame (`--frame` in `style.css`), square corners and hard
   shadows. Everything must fit a 320 px wide phone.
-- `todo.md` is the user's own list (in the repo): edit it only when asked, and let
+- `TODO.md` is the user's own list (in the repo): edit it only when asked, and let
   the user tick items off.
 
 ## Next steps

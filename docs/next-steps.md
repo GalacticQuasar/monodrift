@@ -1,7 +1,7 @@
 # Next steps
 
 Notes left at the end of the multiplayer session (2026-11-21), so a later session can
-pick up without the conversation. `todo.md` is the user's own list; this file is
+pick up without the conversation. `TODO.md` is the user's own list; this file is
 background for it.
 
 ## Ghost races (planned, not started)
