@@ -9,6 +9,8 @@ Fixes:
 - Fix jitters - but only seem to be present on windows laptops, mac laptop runs really smoothly
 
 Features:
+- Not instant death mode where if you hit the wall of the track, you bounce off instead of ending your run...
+  - This wouldn't make sense for normal mode (since it would go on forever), but maybe for a mode that has a finish line?
 - Add spedometer
 - Explosion when you die
 - Unlock colors if you get past a certain threshold of score (maybe the year color tv was released: 1738?)
